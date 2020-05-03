@@ -24,3 +24,11 @@ Even if the project turns out to be unsuccessful, it should
 give me very detailed understanding of the pitfalls of
 web development, as opposed to a generic non-knowledge like 
 "JavaScript is slow". 
+
+## Twitch
+
+I am streaming my work at https://www.twitch.tv/mmbala .
+
+Besides just coding, I hope to find some like-minded devs that I can
+engage with and learn from.
+
