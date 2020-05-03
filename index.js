@@ -60,7 +60,7 @@ function draw(ctx, data) {
   c.fillStyle = 'red';
 
   for (let i = 0; i < data.x.length; i += 1) {
-    // c.fillStyle = `rgb(${i % 256}, ${(i/15) % 150}, 0)`;
+    c.fillStyle = `rgb(${i % 256}, ${(i/15) % 150}, 0)`;
     const x = data.x[i];
     const y = data.y[i];
     const o = data.o[i];
