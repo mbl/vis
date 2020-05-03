@@ -6,7 +6,10 @@ let ctx = {
   height: 0,
 };
 
-function init(elementId = 'container', width = 600, height = 800) {
+// My macbook is 2560 x 1600 retina, but the browser chrome takes some space
+// and for streaming I only use part of my window. So 600 x 600 is a reasonable default
+// canvas size.
+function init(elementId = 'container', width = 600, height = 600) {
   const div = document.getElementById(elementId);
 
   const canvas = document.createElement("canvas");
