@@ -12,6 +12,7 @@ function init(elementId = 'container', width = 600, height = 600) {
   canvas.style.backgroundColor = 'black';
   canvas.style.width = `${width}px`;
   canvas.style.height = `${height}px`;
+  canvas.style.imageRendering = 'pixelated';
 
   div.appendChild(canvas);
 
@@ -72,8 +73,8 @@ function draw(ctx, data) {
     const dy = Math.cos(timeSeconds + oi) * 100;
 
     c.fillRect(
-      xi + dx,
-      yi + dy,
+      ((xi + dx) | 0),
+        ((yi + dy) | 0),
       6, 6);
   }
 
@@ -89,9 +90,9 @@ function draw(ctx, data) {
 }
 
 function run() {
-  const numRectangles = 20000;
+  const numRectangles = 5000;
 
-  const ctx = init();
+  const ctx = init('container', 600, 600);
   const data = generateData(ctx, numRectangles);
 
   function loop() {
