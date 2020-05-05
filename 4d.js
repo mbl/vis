@@ -131,7 +131,7 @@ function draw(ctx, data) {
     c.fillRect(
       (px | 0),
       (py | 0),
-      6, 6);
+      3, 3);
   }
 
   const endTime = Date.now();
@@ -146,7 +146,7 @@ function draw(ctx, data) {
 }
 
 function run() {
-  const numRectangles = 5000;
+  const numRectangles = 15000;
 
   const ctx = init('container', 600, 600);
   const data = generateData(ctx, numRectangles);
