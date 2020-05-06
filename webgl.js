@@ -16,7 +16,7 @@ function init(elementId = 'container', width = 600, height = 600) {
 
   div.appendChild(canvas);
 
-  var contextAttributes = {
+  const contextAttributes = {
     alpha: false,
     depth: true,
     stencil: false,
@@ -179,7 +179,7 @@ function initGl(ctx) {
   const dx = 0;
   const dy = 0;
 
-  // Initalize uniforms
+  // Initialize uniforms
   const transformMatrixInit = [
     0.5, 0, 0, 0, // x
     0, 0.5, 0, 0, // y
@@ -206,7 +206,6 @@ function initGl(ctx) {
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
   return {
-    squareVerticesBuffer,
     posAttribute,
     shaderProgram,
     squareVerticesBuffer,
