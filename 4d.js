@@ -146,7 +146,7 @@ function draw(ctx, data) {
 }
 
 function run() {
-  const numRectangles = 15000;
+  const numRectangles = 5000;
 
   const ctx = init('container', 600, 600);
   const data = generateData(ctx, numRectangles);
