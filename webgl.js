@@ -72,7 +72,7 @@ function generateData(ctx, num = 1) {
   const w = new Float32Array(num);
   const color = new Uint8Array(num * 4);
 
-  const num2 = (num / 2) | 0;
+  const num2 = Math.trunc(num / 2);
 
   for (let i = 0; i < num2; i += 1) {
     const xv = sigmoid(Math.random() - 0.5);
@@ -99,15 +99,15 @@ function generateData(ctx, num = 1) {
     // color[i * 4 + 3] = 0xff;
   }
 
-  for (let i = 0; i < num; i += 2) {
-    const xv = Math.sin(i / num * Math.PI * 41) * 0.5;
-    const yv = Math.sin(i / num * Math.PI * 87) * 0.5;
-    const zv = Math.sin(i / num * Math.PI * 29) * 0.5;
-    const wv = Math.sin(i / num * Math.PI * 131) * 0.5;
-
+  for (let i = num2; i < num; i += 1) {
     const iN = i;
+    const iO = i;
+    const xv = Math.sin(iO / num * Math.PI * 41) * 0.5;
+    const yv = Math.sin(iO / num * Math.PI * 87) * 0.5;
+    const zv = Math.sin(iO / num * Math.PI * 29) * 0.5;
+    const wv = Math.sin(iO / num * Math.PI * 131) * 0.5;
 
-    const fuzz1 = (Math.sin(i / num * Math.PI * 2 * 50.0) + 1.0) * 0.5;
+    const fuzz1 = (Math.sin(iO / num * Math.PI * 2 * 50.0) + 1.0) * 0.5;
     let fuzz = fuzz1 * 0.03;
 
     x[iN] = xv + Math.random() * fuzz;
@@ -358,11 +358,11 @@ function draw(ctx, g, data) {
 
   gl.uniformMatrix4fv(g.uMatrix, false, g.transformMatrix);
 
-  g.ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, data.x.length);
+  g.ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, data.x.length * 6);
 }
 
 function run() {
-  const numRectangles = 1000000;
+  const numRectangles = 150000;
 
   const ctx = init('container', 600, 600);
   const data = generateData(ctx, numRectangles);
