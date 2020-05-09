@@ -1,4 +1,4 @@
-fetch("main.wasm").then(reponse =>
+fetch("math.wasm").then(reponse =>
     reponse.arrayBuffer()
 ).then(bytes =>
     WebAssembly.instantiate(bytes, {})
@@ -7,5 +7,6 @@ fetch("main.wasm").then(reponse =>
 ).then(main);
 
 function main(wasm) {
-    console.log(wasm);
+    const result = wasm.exports.add(1, 2);
+    console.log(result);
 }
