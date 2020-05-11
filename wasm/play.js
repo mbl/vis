@@ -87,8 +87,10 @@ function generateData(num = 1) {
   }
 
 function main(wasm) {
-    const width = 600;
-    const height = 600;
+    const screenWidth = 600;
+    const screenHeight = 600;
+    const width = screenWidth * window.devicePixelRatio;
+    const height = screenHeight * window.devicePixelRatio;
     const frameSize = width * height * 4;
     const pageSize = 65536;
 
@@ -122,10 +124,10 @@ function main(wasm) {
 
     const canvas = document.getElementById('picture');
     const context = canvas.getContext('2d'); // TODO: bitmaprenderer
-    canvas.width = width * window.devicePixelRatio;
-    canvas.height = height * window.devicePixelRatio;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.width = `${screenWidth}px`;
+    canvas.style.height = `${screenHeight}px`;
     
     var idata = context.createImageData(width, height);
 
