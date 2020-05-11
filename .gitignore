@@ -1,4 +1,3 @@
-.gitconfig
 *.iml
 .idea
 wasm/*.wasm
