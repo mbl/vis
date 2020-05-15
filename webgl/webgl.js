@@ -1,3 +1,5 @@
+import { generateData } from '../generateData.js';
+
 // My macbook is 2560 x 1600 retina, but the browser chrome takes some space
 // and for streaming I only use part of my window. So 600 x 600 is a reasonable default
 // canvas size.
@@ -58,86 +60,6 @@ let xwAngle = 0.0; // Rotation around YZ
 let ywAngle = 0.0; // Rotation around XZ
 let zwAngle = 0.0; // Rotation around XY
 
-function sigmoid(x) {
-  const ax = x * 50;
-
-  const ex = Math.exp(ax);
-  return ex / (ex + 1) - 0.5;
-}
-
-function generateData(ctx, num = 1) {
-  const x = new Float32Array(num);
-  const y = new Float32Array(num);
-  const z = new Float32Array(num);
-  const w = new Float32Array(num);
-  const color = new Uint8Array(num * 4);
-
-  const num2 = Math.trunc(num / 2);
-
-  for (let i = 0; i < num2; i += 1) {
-    const xv = sigmoid(Math.random() - 0.5);
-    const yv = sigmoid(Math.random() - 0.5);
-    const zv = sigmoid(Math.random() - 0.5);
-    const wv = sigmoid(Math.random() - 0.5);
-
-    x[i] = xv;
-    z[i] = yv;
-    y[i] = zv;
-    w[i] = wv;
-
-    // Original
-    // ${i % 256}, ${(i / 15) % 150}, ${(wv + 0.5) * 255})`);
-    color[i * 4 + 0] = i % 256; // R
-    color[i * 4 + 1] = ((i / 15) % 150) | 0 // G
-    color[i * 4 + 2] = ((wv + 0.5) * 255) | 0; // B
-    color[i * 4 + 3] = 0xff;
-
-    // Pretty
-    // color[i * 4 + 0] = ((xv + 0.5) * 255) | 0; // R
-    // color[i * 4 + 1] = ((yv + 0.5) * 255) | 0; // G
-    // color[i * 4 + 2] = ((wv + 0.5) * 255) | 0; // B
-    // color[i * 4 + 3] = 0xff;
-  }
-
-  for (let i = num2; i < num; i += 1) {
-    const iN = i;
-    const iO = i;
-    const xv = Math.sin(iO / num * Math.PI * 41) * 0.5;
-    const yv = Math.sin(iO / num * Math.PI * 87) * 0.5;
-    const zv = Math.sin(iO / num * Math.PI * 29) * 0.5;
-    const wv = Math.sin(iO / num * Math.PI * 131) * 0.5;
-
-    const fuzz1 = (Math.sin(iO / num * Math.PI * 2 * 50.0) + 1.0) * 0.5;
-    let fuzz = fuzz1 * 0.03;
-
-    x[iN] = xv + Math.random() * fuzz;
-    z[iN] = yv + Math.random() * fuzz;
-    y[iN] = zv + Math.random() * fuzz;
-    w[iN] = wv + Math.random() * fuzz;
-
-    // Original
-    // ${i % 256}, ${(i / 15) % 150}, ${(wv + 0.5) * 255})`);
-    color[iN * 4 + 0] = fuzz1 * 255;
-    color[iN * 4 + 1] = (xv + 0.5) * 255;
-    color[iN * 4 + 2] = (wv + 0.5) * 255;
-    color[iN * 4 + 3] = 0xff;
-
-    // Pretty
-    // color[i * 4 + 0] = ((xv + 0.5) * 255) | 0; // R
-    // color[i * 4 + 1] = ((yv + 0.5) * 255) | 0; // G
-    // color[i * 4 + 2] = ((wv + 0.5) * 255) | 0; // B
-    // color[i * 4 + 3] = 0xff;
-  }
-
-  return {
-    x,
-    y,
-    z,
-    w,
-    color,
-  };
-}
-
 function initGl(ctx, data) {
   const gl = ctx.context;
 
@@ -157,11 +79,8 @@ function initGl(ctx, data) {
   // language=GLSL
   const vertexShaderCode = `
       attribute vec2 aPos; // Corner of triangle, -1..1 range in X and Y (ANGLE divisor 6)
-      
-      attribute float aX; // 4D coordinate where to place the point
-      attribute float aY;
-      attribute float aZ;
-      attribute float aW;
+
+      attribute vec4 aCoord; // 4D coordinate where to place the point
       attribute vec4 aColor;
 
       uniform mat4 uMatrix;
@@ -176,10 +95,10 @@ function initGl(ctx, data) {
       void main() {
           vColor = aColor;
 
-          float tx = aX * cos(uXzAngle) - aZ * sin(uXzAngle);
-          float ty = aY;
-          float tz = aX * sin(uXzAngle) + aZ * cos(uXzAngle);
-          float tw = aW;
+          float tx = aCoord.x * cos(uXzAngle) - aCoord.z * sin(uXzAngle);
+          float ty = aCoord.y;
+          float tz = aCoord.x * sin(uXzAngle) + aCoord.z * cos(uXzAngle);
+          float tw = aCoord.w;
 
           // XW rotation
           float t = tx * cos(uXwAngle) - tw * sin(uXwAngle);
@@ -292,20 +211,18 @@ function initGl(ctx, data) {
   gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
-  const buffers = {};
+  const buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+
   const attributes = {};
-  for (let coord of ['x', 'y', 'z', 'w', 'color']) {
-    const buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, data[coord], gl.STATIC_DRAW);
-    buffers[coord] = buf;
-
-    const attributeName = `a${coord.charAt(0).toUpperCase()}${coord.substr(1)}`;
-    const attribute = gl.getAttribLocation(shaderProgram, attributeName);
-    gl.enableVertexAttribArray(attribute);
-
-    attributes[coord] = attribute;
-  }
+  
+  const coord = gl.getAttribLocation(shaderProgram, 'aCoord');
+  gl.enableVertexAttribArray(coord);
+  attributes['aCoord'] = coord;
+  const color = gl.getAttribLocation(shaderProgram, 'aColor');
+  gl.enableVertexAttribArray(color);
+  attributes['aColor'] = color;
 
   return {
     posAttribute,
@@ -317,7 +234,7 @@ function initGl(ctx, data) {
     uYwAngle,
     transformMatrix,
     ext,
-    buffers,
+    buffer,
     attributes,
   }
 }
@@ -340,14 +257,13 @@ function draw(ctx, g, data) {
   gl.bindBuffer(gl.ARRAY_BUFFER, g.squareVerticesBuffer);
   gl.vertexAttribPointer(g.posAttribute, 2, gl.FLOAT, false, 0, 0);
 
-  for (let coord of ['x', 'y', 'z', 'w']) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, g.buffers[coord]);
-    gl.vertexAttribPointer(g.attributes[coord], 1, gl.FLOAT, false, 0, 0);
-    g.ext.vertexAttribDivisorANGLE(g.attributes[coord], 6);
-  }
-  gl.bindBuffer(gl.ARRAY_BUFFER, g.buffers.color);
-  gl.vertexAttribPointer(g.attributes.color, 4, gl.UNSIGNED_BYTE, true, 0, 0);
-  g.ext.vertexAttribDivisorANGLE(g.attributes.color, 6);
+  gl.bindBuffer(gl.ARRAY_BUFFER, g.buffer);
+  gl.vertexAttribPointer(g.attributes['aCoord'], 4, gl.FLOAT, false, 8 * 4, 0);
+  g.ext.vertexAttribDivisorANGLE(g.attributes['aCoord'], 6);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, g.buffer);
+  gl.vertexAttribPointer(g.attributes['aColor'], 4, gl.FLOAT, true, 8 * 4, 4 * 4);
+  g.ext.vertexAttribDivisorANGLE(g.attributes['aColor'], 6);
 
   // const time = Date.now() / 1000.0;
   // const dx = Math.cos(time) * 0.5;
@@ -358,14 +274,14 @@ function draw(ctx, g, data) {
 
   gl.uniformMatrix4fv(g.uMatrix, false, g.transformMatrix);
 
-  g.ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, data.x.length * 6);
+  g.ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, data.length / 8 * 6);
 }
 
 function run() {
   const numRectangles = 150000;
 
   const ctx = init('container', 600, 600);
-  const data = generateData(ctx, numRectangles);
+  const data = generateData(numRectangles);
   const glCtx = initGl(ctx, data);
 
   function loop() {

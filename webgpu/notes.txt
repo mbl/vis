@@ -1,0 +1,45 @@
+
+// Send commands
+device.queue.submit(commands)
+
+// What commands?
+commands <- commandEncoder
+  - renderPass
+      - setPipeline
+      - setVertexBuffers  
+      - setBindGroup
+      - draw
+
+// Pipeline
+- vertexStage
+    - entryPoint + shader
+- fragmentStage
+    - entryPoint + shader
+- primitiveTopology
+    - string
+- rasterizationState
+    - ... ??? use default
+- colorStates[]
+    - format
+    - writeMask: 15 // R | G | B | A
+    - alpha + color blend
+- depthStencilState
+    - depthCompare=less
+    - depthWriteEnabled: true 
+- vertexState
+    - ???? default
+
+( + MSAA setup)
+
+
+// Vertex Buffers
+- setVertexBuffer(binding, buffer, offset);
+
+// Bind Group
+- layout // Type information
+    - bindings[]
+       - binding - ID of my binding
+       - visibility - which stage can see this
+       - type "uniform-buffer"
+    
+- bindings // How to translate to shader inputs
