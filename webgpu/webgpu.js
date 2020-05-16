@@ -35,6 +35,7 @@ vertex FragmentData vertex_main(
     constant float4x4[] modelViewProjectionMatrix : register(b${transformBindingNum}))
 {
     FragmentData out;
+    position.w = 1.0;
     out.position = mul(modelViewProjectionMatrix[0], position);
     out.position.xy += triangle * 0.003;
     out.color = color;
@@ -49,19 +50,19 @@ fragment float4 fragment_main(float4 color : attribute(${colorAttributeNum})) : 
 `;
 
 let device, swapChain, verticesBuffer, trianglesBuffer, bindGroupLayout, pipeline, renderPassDescriptor;
-let projectionMatrix = [
+let projectionMatrix = new Float32Array([
 //  x  , y  , z  , w
 //  ^
 //  |
     1  , 0  , 0  , 0, // x is multiplied by <---
     0  , 1  , 0  , 0, // y
     0  , 0  , 0.1 , 1, // z
-    0  , 0  , 0.2 , 3  // w = 1.0
-];
+    0  , 0  , 0.2 , 1.5  // w = 1.0
+]);
 
 const colorOffset = 4 * 4;
 const vertexSize = 4 * 8;
-const numInstances = 1000;
+const numInstances = 1000000;
 const verticesArray = generateData(numInstances);
 
 async function init() {
@@ -293,7 +294,7 @@ function drawCommands(mappedGroup) {
     passEncoder.setBindGroup(bindGroupIndex, mappedGroup.bindGroup);
     
     // vertices, instances, first vertex, first instance
-    passEncoder.draw(6 * numInstances, numInstances, 0, 0);
+    passEncoder.draw(6, numInstances, 0, 0);
     passEncoder.endPass();
 
     device.getQueue().submit([commandEncoder.finish()]);
@@ -308,9 +309,7 @@ function drawCommands(mappedGroup) {
 }
 
 function updateTransformArray(array) {
-    for (let i=0; i < 16; i++) {
-        array[i] = projectionMatrix[i];
-    }
+    array.set(projectionMatrix);
 }
 
 window.addEventListener("load", init);
