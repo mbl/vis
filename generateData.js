@@ -27,22 +27,27 @@ export function generateData(num = 1) {
       result[i * stride + 6] = ((wv + 0.5) * 255) / 255.0; // B
       result[i * stride + 7] = 1.0;
     }
+
+    const fuzzFactor = 0.2;
   
     for (let i = num2; i < num; i += 1) {
       const iN = i;
       const iO = i;
-      const xv = Math.sin(iO / num * Math.PI * 41) * 0.5;
-      const yv = Math.sin(iO / num * Math.PI * 87) * 0.5;
-      const zv = Math.sin(iO / num * Math.PI * 29) * 0.5;
-      const wv = Math.sin(iO / num * Math.PI * 131) * 0.5;
+      // Need to be in -0.5 .. 0.5 range
+      const xv = Math.sin(iO / num * Math.PI * 41) * (0.5 - fuzzFactor / 2);
+      const yv = Math.sin(iO / num * Math.PI * 87) * (0.5 - fuzzFactor / 2);
+      const zv = Math.sin(iO / num * Math.PI * 29) * (0.5 - fuzzFactor / 2);
+      const wv = Math.sin(iO / num * Math.PI * 131) * (0.5 - fuzzFactor / 2);
   
+      // 0..1 range
       const fuzz1 = (Math.sin(iO / num * Math.PI * 2 * 50.0) + 1.0) * 0.5;
-      let fuzz = fuzz1 * 0.03;
+      
+      let fuzz = fuzz1 * fuzzFactor;
     
-      result[iN * stride + 0] = xv + Math.random() * fuzz;
-      result[iN * stride + 1] = yv + Math.random() * fuzz;
-      result[iN * stride + 2] = zv + Math.random() * fuzz;
-      result[iN * stride + 3] = wv + Math.random() * fuzz;
+      result[iN * stride + 0] = xv + (Math.random() - 0.5) * fuzz;
+      result[iN * stride + 1] = yv + (Math.random() - 0.5) * fuzz;
+      result[iN * stride + 2] = zv + (Math.random() - 0.5) * fuzz;
+      result[iN * stride + 3] = wv + (Math.random() - 0.5) * fuzz;
       result[iN * stride + 4] = fuzz1; // R
       result[iN * stride + 5] = (xv + 0.5); // G
       result[iN * stride + 6] = (wv + 0.5); // B

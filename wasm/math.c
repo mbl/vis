@@ -1,14 +1,19 @@
 #define PI 3.14159265358979
 
+unsigned int colorToUint32(float * components) {
+	unsigned char r = (unsigned char)(components[0] * 255);
+	unsigned char g = (unsigned char)(components[1] * 255);
+	unsigned char b = (unsigned char)(components[2] * 255);
+	unsigned char a = (unsigned char)(components[3] * 255);
+
+	// Little endian
+	return r | g << 8 | b << 16 | a << 24;
+}
+
 void frame(
 	int time,
 	int numRectangles,
-	float *x,
-	float *y,
-	float *z,
-	float *w,
-	unsigned int *color, // R, G, B, A as separate bytes
-
+	float *data,  // X, Y, Z, W, R, G, B, A as separate bytes
 	float sinXzAngle,
 	float cosXzAngle,
 	float sinXwAngle,
@@ -30,13 +35,15 @@ void frame(
 		frameBytes[i+1] = (unsigned char)(frameBytes[i+1] * darkenFactor);
 		frameBytes[i+2] = (unsigned char)(frameBytes[i+2] * darkenFactor);
 		// frameBytes[i+3] = (unsigned char)(frameBytes[i+3] * 0.9);
+		frameBytes[i+3] = 0xff;
 	}
 
 	for (int i=0; i < numRectangles; i++) {
-		float aX = x[i];
-		float aY = y[i];
-		float aZ = z[i];
-		float aW = w[i];
+		int i8 = i * 8;
+		float aX = data[i8 + 0];
+		float aY = data[i8 + 1];
+		float aZ = data[i8 + 2];
+		float aW = data[i8 + 3];
 
 		float tx = aX * cosXzAngle - aZ * sinXzAngle;
 		float ty = aY;
@@ -62,10 +69,11 @@ void frame(
 		int ys = (int)(ty / zz * height + height/2);
 
 		if (xs >= 0 && xs < width && ys >= 0 && ys < height) {
-			frame[ys * width + xs] = color[i];
-			frame[ys * width + xs + 1] = color[i];
-			frame[(ys + 1) * width + xs] = color[i];
-			frame[(ys + 1) * width + xs + 1] = color[i];
+			int color = colorToUint32(data + i8 + 4);
+			frame[ys * width + xs] = color;
+			// frame[ys * width + xs + 1] = color;
+			// frame[(ys + 1) * width + xs] = color;
+			// frame[(ys + 1) * width + xs + 1] = color;
 		}
 	}
 }
