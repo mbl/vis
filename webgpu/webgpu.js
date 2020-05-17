@@ -5,9 +5,22 @@ if (!navigator.gpu || GPUBufferUsage.COPY_SRC === undefined)
 
 const triangleAttributeNum  = 0;
 const positionAttributeNum  = 1;
-const colorAttributeNum = 2;
+const colorAttributeNum     = 2;
 
 const transformBindingNum   = 0;
+const uXzAngleBindingNum    = 1;
+const uXwAngleBindingNum    = 2;
+const uYwAngleBindingNum    = 3;
+
+// Normal 3D rotations
+let xzAngle = 0.0; // Rotation around YW
+let xyAngle = 0.0; // Rotation around ZW
+let yzAngle = 0.0; // Rotation around XW
+
+// "4D" rotations
+let xwAngle = 0.0; // Rotation around YZ
+let ywAngle = 0.0; // Rotation around XZ
+let zwAngle = 0.0; // Rotation around XY
 
 const bindGroupIndex        = 0;
 
@@ -32,13 +45,33 @@ vertex FragmentData vertex_main(
     float2 triangle : attribute(${triangleAttributeNum}), 
     float4 position : attribute(${positionAttributeNum}), 
     float4 color : attribute(${colorAttributeNum}), 
-    constant float4x4[] modelViewProjectionMatrix : register(b${transformBindingNum}))
+    constant float4x4[] modelViewProjectionMatrix : register(b${transformBindingNum}),
+    constant float[] uXzAngle : register(b${uXzAngleBindingNum}),
+    constant float[] uXwAngle : register(b${uXwAngleBindingNum}),
+    constant float[] uYwAngle : register(b${uYwAngleBindingNum}))
 {
     FragmentData out;
-    position.w = 1.0;
-    out.position = mul(modelViewProjectionMatrix[0], position);
-    out.position.xy += triangle * 0.003;
-    out.color = color;
+
+    float a1 = uXzAngle[0] * 0.0;
+    float a2 = uXwAngle[0] * 0.0;
+    float a3 = uYwAngle[0] * 0.0;
+
+    float tx = position.x * cos(a1) - position.z * sin(a1);
+    float ty = position.y;
+    float tz = position.x * sin(a1) + position.z * cos(a1);
+    float tw = position.w;
+
+    float t = tx * cos(a2) - tw * sin(a2);
+    tw = tx * sin(a2) + tw * cos(a2);
+    tx = t;
+
+    t =  ty * cos(a3) - tw * sin(a3);
+    tw = ty * sin(a3) + tw * cos(a3);
+    ty = t;
+
+    out.position = mul(modelViewProjectionMatrix, float4(tx, ty, tz, 1.0)) + float4(triangle.x * 0.003, triangle.y * 0.003, 0.0, 0.0);
+    // out.position = float4(triangle.x, triangle.y, 1.0, 1.0);
+    out.color = float4(1.0, 0.0, 0.0, 1.0);
     
     return out;
 }
@@ -62,12 +95,14 @@ let projectionMatrix = new Float32Array([
 
 const colorOffset = 4 * 4;
 const vertexSize = 4 * 8;
-const numInstances = 1000000;
+const numInstances = 10;
 const verticesArray = generateData(numInstances);
 
 async function init() {
     const adapter = await navigator.gpu.requestAdapter();
     device = await adapter.requestDevice();
+    device.pushErrorScope('validation');
+    device.pushErrorScope('out-of-memory');
 
     const canvas = document.querySelector('canvas');
     let canvasSize = canvas.getBoundingClientRect();
@@ -79,8 +114,8 @@ async function init() {
 
     const context = canvas.getContext('gpu');
 
-    const swapChainDescriptor = { 
-        device: device, 
+    const swapChainDescriptor = {
+        device: device,
         format: "bgra8unorm"
     };
     swapChain = context.configureSwapChain(swapChainDescriptor);
@@ -89,8 +124,8 @@ async function init() {
     const shaderModule = device.createShaderModule(shaderModuleDescriptor);
 
     // Instance buffer
-    const verticesBufferDescriptor = { 
-        size: verticesArray.byteLength, 
+    const verticesBufferDescriptor = {
+        size: verticesArray.byteLength,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
     };
     let verticesArrayBuffer;
@@ -101,8 +136,8 @@ async function init() {
     verticesBuffer.unmap();
 
     // Triangle buffer
-    const trianglesBufferDescriptor = { 
-        size: trianglesArray.byteLength, 
+    const trianglesBufferDescriptor = {
+        size: trianglesArray.byteLength,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
     };
     let trianglesArrayBuffer;
@@ -140,8 +175,8 @@ async function init() {
         stride: vertexSize,
         stepMode: "instance"
     };
-    const vertexInputDescriptor = { 
-        vertexBuffers: [vertexBufferDescriptor, triangleBufferDescriptor] 
+    const vertexInputDescriptor = {
+        vertexBuffers: [vertexBufferDescriptor, triangleBufferDescriptor]
     };
 
     // Bind group binding layout
@@ -150,8 +185,30 @@ async function init() {
         visibility: GPUShaderStage.VERTEX,
         type: "uniform-buffer"
     };
+    const uXzAngleBufferBindGroupLayoutBinding = {
+        binding: uXzAngleBindingNum,
+        visibility: GPUShaderStage.VERTEX,
+        type: "uniform-buffer"
+    };
+    const uXwAngleBufferBindGroupLayoutBinding = {
+        binding: uXwAngleBindingNum,
+        visibility: GPUShaderStage.VERTEX,
+        type: "uniform-buffer"
+    };
+    const uYwAngleBufferBindGroupLayoutBinding = {
+        binding: uYwAngleBindingNum,
+        visibility: GPUShaderStage.VERTEX,
+        type: "uniform-buffer"
+    };
 
-    const bindGroupLayoutDescriptor = { bindings: [transformBufferBindGroupLayoutBinding] };
+    const bindGroupLayoutDescriptor = {
+        bindings: [
+            transformBufferBindGroupLayoutBinding,
+            uXzAngleBufferBindGroupLayoutBinding,
+            uXwAngleBufferBindGroupLayoutBinding,
+            uYwAngleBufferBindGroupLayoutBinding
+        ]
+    };
     bindGroupLayout = device.createBindGroupLayout(bindGroupLayoutDescriptor);
 
     // Pipeline
@@ -233,16 +290,21 @@ async function init() {
         clearDepth: 1.0
     };
 
-    renderPassDescriptor = { 
+    renderPassDescriptor = {
         colorAttachments: [colorAttachment],
         depthStencilAttachment: depthAttachment
     };
 
-    render();
+    let error = await device.popErrorScope();
+    console.log(error);
+    error = await device.popErrorScope();
+    console.log(error);
+
+    await render();
 }
 
 /* Transform Buffers and Bindings */
-const transformSize = 4 * 16;
+const transformSize = 4 * 16 + 3 * 4;
 
 const transformBufferDescriptor = {
     size: transformSize,
@@ -251,35 +313,78 @@ const transformBufferDescriptor = {
 
 let mappedGroups = [];
 
-function render() {
+async function render() {
+    device.pushErrorScope('validation');
+    device.pushErrorScope('out-of-memory');
     if (mappedGroups.length === 0) {
         const [buffer, arrayBuffer] = device.createBufferMapped(transformBufferDescriptor);
         const group = device.createBindGroup(createBindGroupDescriptor(buffer));
         let mappedGroup = { buffer: buffer, arrayBuffer: arrayBuffer, bindGroup: group };
-        drawCommands(mappedGroup);
-    } else
-        drawCommands(mappedGroups.shift());
+        await drawCommands(mappedGroup);
+    } else {
+        await drawCommands(mappedGroups.shift());
+    }
+
+    let error = await device.popErrorScope();
+    console.log(error);
+    error = await device.popErrorScope();
+    console.log(error);
+
 }
 
 function createBindGroupDescriptor(transformBuffer) {
-    const transformBufferBinding = {
-        buffer: transformBuffer,
-        offset: 0,
-        size: transformSize
-    };
     const transformBufferBindGroupBinding = {
         binding: transformBindingNum,
-        resource: transformBufferBinding
+        resource: {
+            buffer: transformBuffer,
+            offset: 0,
+            size: 16 * 4
+        }
     };
+
+    const uXzAngleBufferBindGroupBinding = {
+        binding: uXzAngleBindingNum,
+        resource: {
+            buffer: transformBuffer,
+            offset: 16 * 4,
+            size: 4
+        }
+    };
+
+    const uXwAngleBufferBindGroupBinding = {
+        binding: uXwAngleBindingNum,
+        resource: {
+            buffer: transformBuffer,
+            offset: 16 * 4 + 4,
+            size: 4
+        }
+    };
+
+    const uYwAngleBufferBindGroupBinding = {
+        binding: uYwAngleBindingNum,
+        resource: {
+            buffer: transformBuffer,
+            offset: 16 * 4 + 8,
+            size: 4
+        }
+    };
+
     return {
         layout: bindGroupLayout,
-        bindings: [transformBufferBindGroupBinding]
+        bindings: [
+            transformBufferBindGroupBinding,
+            uXzAngleBufferBindGroupBinding,
+            uXwAngleBufferBindGroupBinding,
+            uYwAngleBufferBindGroupBinding
+        ]
     };
 }
 
-function drawCommands(mappedGroup) {
+async function drawCommands(mappedGroup) {
+    device.pushErrorScope('out-of-memory');
     updateTransformArray(new Float32Array(mappedGroup.arrayBuffer));
     mappedGroup.buffer.unmap();
+    console.log('1' + await device.popErrorScope());
 
     const commandEncoder = device.createCommandEncoder();
     renderPassDescriptor.colorAttachments[0].attachment = swapChain.getCurrentTexture().createDefaultView();
@@ -292,7 +397,7 @@ function drawCommands(mappedGroup) {
     passEncoder.setVertexBuffers(0, [verticesBuffer, trianglesBuffer], [0, 0]);
     // Bind groups
     passEncoder.setBindGroup(bindGroupIndex, mappedGroup.bindGroup);
-    
+
     // vertices, instances, first vertex, first instance
     passEncoder.draw(6, numInstances, 0, 0);
     passEncoder.endPass();
@@ -309,7 +414,18 @@ function drawCommands(mappedGroup) {
 }
 
 function updateTransformArray(array) {
+    const time = Date.now();
+    const timeSeconds = time / 10000;
+
+    // Update uniforms
+    xzAngle = (timeSeconds * Math.PI) % (Math.PI * 2);
+    xwAngle = (timeSeconds * Math.PI * 0.3) % (Math.PI * 2);
+    ywAngle = (timeSeconds * Math.PI * 1.2) % (Math.PI * 2);
+
     array.set(projectionMatrix);
+    array[16] = xzAngle;
+    array[17] = xwAngle;
+    array[18] = ywAngle;
 }
 
 window.addEventListener("load", init);
