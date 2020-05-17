@@ -35,8 +35,11 @@ vertex FragmentData vertex_main(
     constant float4x4[] modelViewProjectionMatrix : register(b${transformBindingNum}))
 {
     FragmentData out;
-    position.w = 1.0;
-    out.position = mul(modelViewProjectionMatrix[0], position);
+    float tx = position.x;
+    float ty = position.y;
+    float tz = position.z;
+
+    out.position = mul(modelViewProjectionMatrix[0], float4(tx, ty, tz, 1.0));
     out.position.xy += triangle * 0.003;
     out.color = color;
     
@@ -309,6 +312,16 @@ function drawCommands(mappedGroup) {
 }
 
 function updateTransformArray(array) {
+    const time = Date.now();
+    const time2 = time / 1000.0;
+    const sa = Math.sin(time2);
+    const ca = Math.cos(time2);
+    
+    projectionMatrix[0] = ca;
+    projectionMatrix[2] = -sa;
+    projectionMatrix[8] = sa * 0.1;
+    projectionMatrix[10] = ca * 0.1;
+
     array.set(projectionMatrix);
 }
 
