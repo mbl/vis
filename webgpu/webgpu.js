@@ -34,6 +34,7 @@ const trianglesArray = new Float32Array([
     -1.0, -1.0
 ]);
 
+
 // WHLSL
 const shader = `
 struct FragmentData {
@@ -48,13 +49,14 @@ vertex FragmentData vertex_main(
     constant float4x4[] modelViewProjectionMatrix : register(b${transformBindingNum}),
     constant float[] uXzAngle : register(b${uXzAngleBindingNum}),
     constant float[] uXwAngle : register(b${uXwAngleBindingNum}),
-    constant float[] uYwAngle : register(b${uYwAngleBindingNum}))
+    constant float[] uYwAngle : register(b${uYwAngleBindingNum})
+    )
 {
     FragmentData out;
 
-    float a1 = uXzAngle[0] * 0.0;
-    float a2 = uXwAngle[0] * 0.0;
-    float a3 = uYwAngle[0] * 0.0;
+    float a1 = uXzAngle[0];
+    float a2 = uXwAngle[0];
+    float a3 = uYwAngle[0];
 
     float tx = position.x * cos(a1) - position.z * sin(a1);
     float ty = position.y;
@@ -69,9 +71,9 @@ vertex FragmentData vertex_main(
     tw = ty * sin(a3) + tw * cos(a3);
     ty = t;
 
-    out.position = mul(modelViewProjectionMatrix, float4(tx, ty, tz, 1.0)) + float4(triangle.x * 0.003, triangle.y * 0.003, 0.0, 0.0);
-    // out.position = float4(triangle.x, triangle.y, 1.0, 1.0);
-    out.color = float4(1.0, 0.0, 0.0, 1.0);
+    out.position = mul(modelViewProjectionMatrix[0], float4(tx, ty, tz, 1.0));
+    out.position.xy += triangle * 0.003;
+    out.color = color;
     
     return out;
 }
@@ -95,7 +97,7 @@ let projectionMatrix = new Float32Array([
 
 const colorOffset = 4 * 4;
 const vertexSize = 4 * 8;
-const numInstances = 10;
+const numInstances = 1000000;
 const verticesArray = generateData(numInstances);
 
 async function init() {
@@ -258,7 +260,7 @@ async function init() {
         // attachment is acquired in render loop.
         loadOp: "clear",
         storeOp: "store",
-        clearColor: { r: 0.15, g: 0.15, b: 0.5, a: 1.0 } // GPUColor
+        clearColor: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 } // GPUColor
     };
 
     // Depth stencil texture
@@ -296,9 +298,9 @@ async function init() {
     };
 
     let error = await device.popErrorScope();
-    console.log(error);
+    if (error) console.log(error);
     error = await device.popErrorScope();
-    console.log(error);
+    if (error) console.log(error);
 
     await render();
 }
@@ -326,9 +328,9 @@ async function render() {
     }
 
     let error = await device.popErrorScope();
-    console.log(error);
+    if (error) console.log(error);
     error = await device.popErrorScope();
-    console.log(error);
+    if (error) console.log(error);
 
 }
 
@@ -384,7 +386,8 @@ async function drawCommands(mappedGroup) {
     device.pushErrorScope('out-of-memory');
     updateTransformArray(new Float32Array(mappedGroup.arrayBuffer));
     mappedGroup.buffer.unmap();
-    console.log('1' + await device.popErrorScope());
+    const error = await device.popErrorScope();
+    console.log('drawError' + error);
 
     const commandEncoder = device.createCommandEncoder();
     renderPassDescriptor.colorAttachments[0].attachment = swapChain.getCurrentTexture().createDefaultView();
