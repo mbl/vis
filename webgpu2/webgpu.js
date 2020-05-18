@@ -42,21 +42,25 @@ struct FragmentData {
     float4 color : attribute(${colorAttributeNum});
 }
 
+struct UniformInput {
+    float4x4 modelViewProjectionMatrix;
+    float xzAngle;
+    float xwAngle;
+    float ywAngle;
+}
+
 vertex FragmentData vertex_main(
     float2 triangle : attribute(${triangleAttributeNum}), 
     float4 position : attribute(${positionAttributeNum}), 
     float4 color : attribute(${colorAttributeNum}), 
-    constant float4x4[] modelViewProjectionMatrix : register(b${transformBindingNum}),
-    constant float[] uXzAngle : register(b${uXzAngleBindingNum}),
-    constant float[] uXwAngle : register(b${uXwAngleBindingNum}),
-    constant float[] uYwAngle : register(b${uYwAngleBindingNum})
+    constant UniformInput u : register(b${transformBindingNum}),
     )
 {
     FragmentData out;
 
-    float a1 = uXzAngle[0];
-    float a2 = uXwAngle[0];
-    float a3 = uYwAngle[0];
+    float a1 = u.xzAngle[0];
+    float a2 = u.xwAngle[0];
+    float a3 = u.ywAngle[0];
 
     float tx = position.x * cos(a1) - position.z * sin(a1);
     float ty = position.y;
@@ -71,7 +75,7 @@ vertex FragmentData vertex_main(
     tw = ty * sin(a3) + tw * cos(a3);
     ty = t;
 
-    out.position = mul(modelViewProjectionMatrix[0], float4(tx, ty, tz, 1.0));
+    out.position = mul(u.modelViewProjectionMatrix[0], float4(tx, ty, tz, 1.0));
     out.position.xy += triangle * 0.002;
     out.color = color;
     
@@ -115,7 +119,7 @@ async function init() {
 
     const aspect = Math.abs(canvas.width / canvas.height);
 
-    const context = canvas.getContext('gpu');
+    const context = canvas.getContext('gpupresent');
 
     const swapChainDescriptor = {
         device: device,
@@ -123,7 +127,7 @@ async function init() {
     };
     swapChain = context.configureSwapChain(swapChainDescriptor);
 
-    const shaderModuleDescriptor = { code: shader, isWHLSL: true };
+    const shaderModuleDescriptor = { code: shader };
     const shaderModule = device.createShaderModule(shaderModuleDescriptor);
 
     // Instance buffer
@@ -205,7 +209,7 @@ async function init() {
     };
 
     const bindGroupLayoutDescriptor = {
-        bindings: [
+        entries: [
             transformBufferBindGroupLayoutBinding,
             uXzAngleBufferBindGroupLayoutBinding,
             uXwAngleBufferBindGroupLayoutBinding,
@@ -217,7 +221,8 @@ async function init() {
     // Pipeline
     const depthStateDescriptor = {
         depthWriteEnabled: true,
-        depthCompare: "less"
+        depthCompare: "less",
+        format: "depth24plus-stencil8",
     };
 
     const pipelineLayoutDescriptor = { bindGroupLayouts: [bindGroupLayout] };
@@ -261,7 +266,7 @@ async function init() {
         // attachment is acquired in render loop.
         loadOp: "clear",
         storeOp: "store",
-        clearColor: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 } // GPUColor
+        loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 } // GPUColor
     };
 
     // Depth stencil texture
@@ -275,11 +280,10 @@ async function init() {
 
     const depthTextureDescriptor = {
         size: depthSize,
-        arrayLayerCount: 1,
         mipLevelCount: 1,
         sampleCount: 1,
         dimension: "2d",
-        format: "depth32float-stencil8",
+        format: "depth24plus-stencil8",
         usage: GPUTextureUsage.OUTPUT_ATTACHMENT
     };
 
@@ -287,10 +291,12 @@ async function init() {
 
     // GPURenderPassDepthStencilAttachmentDescriptor
     const depthAttachment = {
-        attachment: depthTexture.createDefaultView(),
+        attachment: depthTexture.createView(),
         depthLoadOp: "clear",
         depthStoreOp: "store",
-        clearDepth: 1.0
+        depthLoadValue: 1.0,
+        stencilLoadValue: 0,
+        stencilStoreOp: "store",
     };
 
     renderPassDescriptor = {
@@ -311,7 +317,7 @@ const transformSize = 4 * 16 + 3 * 4;
 
 const transformBufferDescriptor = {
     size: transformSize,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.MAP_WRITE
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 };
 
 let mappedGroups = [];
@@ -391,14 +397,15 @@ async function drawCommands(mappedGroup) {
     console.log('drawError' + error);
 
     const commandEncoder = device.createCommandEncoder();
-    renderPassDescriptor.colorAttachments[0].attachment = swapChain.getCurrentTexture().createDefaultView();
+    renderPassDescriptor.colorAttachments[0].attachment = swapChain.getCurrentTexture().createView();
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
     // Encode drawing commands
 
     passEncoder.setPipeline(pipeline);
     // Vertex attributes
-    passEncoder.setVertexBuffers(0, [verticesBuffer, trianglesBuffer], [0, 0]);
+    passEncoder.setVertexBuffer(0, verticesBuffer, 0);
+    passEncoder.setVertexBuffer(1, trianglesBuffer, 0);
     // Bind groups
     passEncoder.setBindGroup(bindGroupIndex, mappedGroup.bindGroup);
 
@@ -406,7 +413,7 @@ async function drawCommands(mappedGroup) {
     passEncoder.draw(6, numInstances, 0, 0);
     passEncoder.endPass();
 
-    device.getQueue().submit([commandEncoder.finish()]);
+    device.defaultQueue.submit([commandEncoder.finish()]);
 
     // Ready the current buffer for update after GPU is done with it.
     mappedGroup.buffer.mapWriteAsync().then((arrayBuffer) => {
