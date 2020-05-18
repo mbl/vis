@@ -72,13 +72,15 @@ vertex FragmentData vertex_main(
     ty = t;
 
     out.position = mul(modelViewProjectionMatrix[0], float4(tx, ty, tz, 1.0));
-    out.position.xy += triangle * 0.003;
+    out.position.xy += triangle * 0.002;
     out.color = color;
     
     return out;
 }
 
-fragment float4 fragment_main(float4 color : attribute(${colorAttributeNum})) : SV_Target 0
+fragment float4 fragment_main(
+    float4 color : attribute(${colorAttributeNum})
+) : SV_Target 0
 {
     return color;
 }
