@@ -192,28 +192,10 @@ async function init() {
         visibility: GPUShaderStage.VERTEX,
         type: "uniform-buffer"
     };
-    const uXzAngleBufferBindGroupLayoutBinding = {
-        binding: uXzAngleBindingNum,
-        visibility: GPUShaderStage.VERTEX,
-        type: "uniform-buffer"
-    };
-    const uXwAngleBufferBindGroupLayoutBinding = {
-        binding: uXwAngleBindingNum,
-        visibility: GPUShaderStage.VERTEX,
-        type: "uniform-buffer"
-    };
-    const uYwAngleBufferBindGroupLayoutBinding = {
-        binding: uYwAngleBindingNum,
-        visibility: GPUShaderStage.VERTEX,
-        type: "uniform-buffer"
-    };
 
     const bindGroupLayoutDescriptor = {
         entries: [
             transformBufferBindGroupLayoutBinding,
-            uXzAngleBufferBindGroupLayoutBinding,
-            uXwAngleBufferBindGroupLayoutBinding,
-            uYwAngleBufferBindGroupLayoutBinding
         ]
     };
     bindGroupLayout = device.createBindGroupLayout(bindGroupLayoutDescriptor);
@@ -347,44 +329,14 @@ function createBindGroupDescriptor(transformBuffer) {
         resource: {
             buffer: transformBuffer,
             offset: 0,
-            size: 16 * 4
-        }
-    };
-
-    const uXzAngleBufferBindGroupBinding = {
-        binding: uXzAngleBindingNum,
-        resource: {
-            buffer: transformBuffer,
-            offset: 16 * 4,
-            size: 4
-        }
-    };
-
-    const uXwAngleBufferBindGroupBinding = {
-        binding: uXwAngleBindingNum,
-        resource: {
-            buffer: transformBuffer,
-            offset: 16 * 4 + 4,
-            size: 4
-        }
-    };
-
-    const uYwAngleBufferBindGroupBinding = {
-        binding: uYwAngleBindingNum,
-        resource: {
-            buffer: transformBuffer,
-            offset: 16 * 4 + 8,
-            size: 4
+            size: 16 * 4 + 3 * 4,
         }
     };
 
     return {
         layout: bindGroupLayout,
-        bindings: [
+        entries: [
             transformBufferBindGroupBinding,
-            uXzAngleBufferBindGroupBinding,
-            uXwAngleBufferBindGroupBinding,
-            uYwAngleBufferBindGroupBinding
         ]
     };
 }
@@ -394,7 +346,6 @@ async function drawCommands(mappedGroup) {
     updateTransformArray(new Float32Array(mappedGroup.arrayBuffer));
     mappedGroup.buffer.unmap();
     const error = await device.popErrorScope();
-    console.log('drawError' + error);
 
     const commandEncoder = device.createCommandEncoder();
     renderPassDescriptor.colorAttachments[0].attachment = swapChain.getCurrentTexture().createView();
