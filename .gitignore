@@ -2,3 +2,4 @@
 .idea
 wasm/*.wasm
 *.json
+**/*.spv

@@ -1,16 +1,12 @@
 import { generateData } from '../generateData.js';
 
+export const triangleAttributeNum = 0;
+export const positionAttributeNum = 1;
+export const colorAttributeNum = 2;
+export const transformBindingNum = 0;
+
 if (!navigator.gpu || GPUBufferUsage.COPY_SRC === undefined)
     document.body.className = 'error';
-
-const triangleAttributeNum  = 0;
-const positionAttributeNum  = 1;
-const colorAttributeNum     = 2;
-
-const transformBindingNum   = 0;
-const uXzAngleBindingNum    = 1;
-const uXwAngleBindingNum    = 2;
-const uYwAngleBindingNum    = 3;
 
 // Normal 3D rotations
 let xzAngle = 0.0; // Rotation around YW
@@ -34,62 +30,6 @@ const trianglesArray = new Float32Array([
     -1.0, -1.0
 ]);
 
-
-// WHLSL
-const shader = `
-struct FragmentData {
-    float4 position : SV_Position;
-    float4 color : attribute(${colorAttributeNum});
-}
-
-struct UniformInput {
-    float4x4 modelViewProjectionMatrix;
-    float xzAngle;
-    float xwAngle;
-    float ywAngle;
-}
-
-vertex FragmentData vertex_main(
-    float2 triangle : attribute(${triangleAttributeNum}), 
-    float4 position : attribute(${positionAttributeNum}), 
-    float4 color : attribute(${colorAttributeNum}), 
-    constant UniformInput u : register(b${transformBindingNum}),
-    )
-{
-    FragmentData out;
-
-    float a1 = u.xzAngle[0];
-    float a2 = u.xwAngle[0];
-    float a3 = u.ywAngle[0];
-
-    float tx = position.x * cos(a1) - position.z * sin(a1);
-    float ty = position.y;
-    float tz = position.x * sin(a1) + position.z * cos(a1);
-    float tw = position.w;
-
-    float t = tx * cos(a2) - tw * sin(a2);
-    tw = tx * sin(a2) + tw * cos(a2);
-    tx = t;
-
-    t =  ty * cos(a3) - tw * sin(a3);
-    tw = ty * sin(a3) + tw * cos(a3);
-    ty = t;
-
-    out.position = mul(u.modelViewProjectionMatrix[0], float4(tx, ty, tz, 1.0));
-    out.position.xy += triangle * 0.002;
-    out.color = color;
-    
-    return out;
-}
-
-fragment float4 fragment_main(
-    float4 color : attribute(${colorAttributeNum})
-) : SV_Target 0
-{
-    return color;
-}
-`;
-
 let device, swapChain, verticesBuffer, trianglesBuffer, bindGroupLayout, pipeline, renderPassDescriptor;
 let projectionMatrix = new Float32Array([
 //  x  , y  , z  , w
@@ -103,14 +43,19 @@ let projectionMatrix = new Float32Array([
 
 const colorOffset = 4 * 4;
 const vertexSize = 4 * 8;
-const numInstances = 1000000;
+const numInstances = 10000;
 const verticesArray = generateData(numInstances);
+
+async function checkError(label) {
+    const error = await device.popErrorScope();
+    if (error) console.log(`${label}: ${error.message}`);
+    device.pushErrorScope('validation');
+}
 
 async function init() {
     const adapter = await navigator.gpu.requestAdapter();
     device = await adapter.requestDevice();
     device.pushErrorScope('validation');
-    device.pushErrorScope('out-of-memory');
 
     const canvas = document.querySelector('canvas');
     let canvasSize = canvas.getBoundingClientRect();
@@ -127,78 +72,96 @@ async function init() {
     };
     swapChain = context.configureSwapChain(swapChainDescriptor);
 
-    const shaderModuleDescriptor = { code: shader };
-    const shaderModule = device.createShaderModule(shaderModuleDescriptor);
+    const vertexShaderCode = new Uint32Array(await fetch('main.vert.spv').then(response => response.arrayBuffer()));
+    const fragmentShaderCode = new Uint32Array(await fetch('main.frag.spv').then(response => response.arrayBuffer()));
+
+    const vertexShaderModule = device.createShaderModule(
+        {
+            code: vertexShaderCode
+        }
+    );
+
+    await checkError('createShaderModule vertex ');
+
+    const fragmentShaderModule = device.createShaderModule(
+        {
+            code: fragmentShaderCode 
+        }
+    );
+
+    await checkError('createShaderModule fragment');
 
     // Instance buffer
-    const verticesBufferDescriptor = {
+    let verticesArrayBuffer;
+    [verticesBuffer, verticesArrayBuffer] = device.createBufferMapped({
         size: verticesArray.byteLength,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
-    };
-    let verticesArrayBuffer;
-    [verticesBuffer, verticesArrayBuffer] = device.createBufferMapped(verticesBufferDescriptor);
+    });
 
     const verticesWriteArray = new Float32Array(verticesArrayBuffer);
     verticesWriteArray.set(verticesArray);
     verticesBuffer.unmap();
 
+    await checkError('instance buffer');
+
     // Triangle buffer
-    const trianglesBufferDescriptor = {
+    let trianglesArrayBuffer;
+    [trianglesBuffer, trianglesArrayBuffer] = device.createBufferMapped({
         size: trianglesArray.byteLength,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
-    };
-    let trianglesArrayBuffer;
-    [trianglesBuffer, trianglesArrayBuffer] = device.createBufferMapped(trianglesBufferDescriptor);
+    });
 
     const trianglesWriteArray = new Float32Array(trianglesArrayBuffer);
     trianglesWriteArray.set(trianglesArray);
     trianglesBuffer.unmap();
 
+    await checkError('triangle buffer');
+
     // Vertex Input
-    const triangleAttributeDescriptor = {
-        shaderLocation: triangleAttributeNum,
-        offset: 0,
-        format: "float2"
-    };
     const triangleBufferDescriptor = {
-        attributeSet: [triangleAttributeDescriptor],
-        stride: 2 * 4,
-        stepMode: "vertex" // ???
-        // ANGLE divisor???
+        attributeSet: [
+            {
+                shaderLocation: triangleAttributeNum,
+                offset: 0,
+                format: "float2"
+            }
+        ],
+        arrayStride: 2 * 4,
+        stepMode: "vertex"
     };
 
-    const positionAttributeDescriptor = {
-        shaderLocation: positionAttributeNum,
-        offset: 0,
-        format: "float4"
-    };
-    const colorAttributeDescriptor = {
-        shaderLocation: colorAttributeNum,
-        offset: colorOffset,
-        format: "float4"
-    }
     const vertexBufferDescriptor = {
-        attributeSet: [positionAttributeDescriptor, colorAttributeDescriptor],
-        stride: vertexSize,
+        attributeSet: [
+            {
+                shaderLocation: positionAttributeNum,
+                offset: 0,
+                format: "float4"
+            }, 
+            {
+                shaderLocation: colorAttributeNum,
+                offset: colorOffset,
+                format: "float4"
+            }
+        ],
+        arrayStride: vertexSize,
         stepMode: "instance"
-    };
+    };  
     const vertexInputDescriptor = {
         vertexBuffers: [vertexBufferDescriptor, triangleBufferDescriptor]
     };
 
     // Bind group binding layout
-    const transformBufferBindGroupLayoutBinding = {
-        binding: transformBindingNum, // id[[(0)]]
-        visibility: GPUShaderStage.VERTEX,
-        type: "uniform-buffer"
-    };
-
-    const bindGroupLayoutDescriptor = {
+    bindGroupLayout = device.createBindGroupLayout({
         entries: [
-            transformBufferBindGroupLayoutBinding,
+            {
+                binding: transformBindingNum, // id[[(0)]]
+                visibility: GPUShaderStage.VERTEX,
+                type: "uniform-buffer"
+            },
         ]
-    };
-    bindGroupLayout = device.createBindGroupLayout(bindGroupLayoutDescriptor);
+    });
+
+    await checkError('createBindGroupLayout');
 
     // Pipeline
     const depthStateDescriptor = {
@@ -207,15 +170,19 @@ async function init() {
         format: "depth24plus-stencil8",
     };
 
-    const pipelineLayoutDescriptor = { bindGroupLayouts: [bindGroupLayout] };
-    const pipelineLayout = device.createPipelineLayout(pipelineLayoutDescriptor);
+    const pipelineLayout = device.createPipelineLayout({ 
+        bindGroupLayouts: [bindGroupLayout] 
+    });
+
+    await checkError('createPipelineLayout');
+
     const vertexStageDescriptor = {
-        module: shaderModule,
-        entryPoint: "vertex_main"
+        module: vertexShaderModule,
+        entryPoint: "main"
     };
     const fragmentStageDescriptor = {
-        module: shaderModule,
-        entryPoint: "fragment_main"
+        module: fragmentShaderModule,
+        entryPoint: "main"
     };
     const colorState = {
         format: "bgra8unorm",
@@ -244,6 +211,8 @@ async function init() {
     };
     pipeline = device.createRenderPipeline(pipelineDescriptor);
 
+    await checkError('createRenderPipeline');
+
     let colorAttachment = {
         // attachment is acquired in render loop.
         loadOp: "clear",
@@ -271,6 +240,8 @@ async function init() {
 
     const depthTexture = device.createTexture(depthTextureDescriptor);
 
+    await checkError('depthTextureDescriptor');
+
     // GPURenderPassDepthStencilAttachmentDescriptor
     const depthAttachment = {
         attachment: depthTexture.createView(),
@@ -286,9 +257,7 @@ async function init() {
         depthStencilAttachment: depthAttachment
     };
 
-    let error = await device.popErrorScope();
-    if (error) console.log(error);
-    error = await device.popErrorScope();
+    const error = await device.popErrorScope();
     if (error) console.log(error);
 
     await render();
@@ -342,14 +311,20 @@ function createBindGroupDescriptor(transformBuffer) {
 }
 
 async function drawCommands(mappedGroup) {
-    device.pushErrorScope('out-of-memory');
+    device.pushErrorScope('validation');
     updateTransformArray(new Float32Array(mappedGroup.arrayBuffer));
     mappedGroup.buffer.unmap();
-    const error = await device.popErrorScope();
+    
+    await checkError('updateTransformArray');
 
     const commandEncoder = device.createCommandEncoder();
+
+    await checkError('createCommandEncoder');
+
     renderPassDescriptor.colorAttachments[0].attachment = swapChain.getCurrentTexture().createView();
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+
+    await checkError('beginRenderPass');
 
     // Encode drawing commands
 
@@ -364,7 +339,11 @@ async function drawCommands(mappedGroup) {
     passEncoder.draw(6, numInstances, 0, 0);
     passEncoder.endPass();
 
+    await checkError('passEncode endPass');
+
     device.defaultQueue.submit([commandEncoder.finish()]);
+
+    await checkError('defaultQueue.submit');
 
     // Ready the current buffer for update after GPU is done with it.
     mappedGroup.buffer.mapWriteAsync().then((arrayBuffer) => {
@@ -372,7 +351,9 @@ async function drawCommands(mappedGroup) {
         mappedGroups.push(mappedGroup);
     });
 
-    requestAnimationFrame(render);
+    device.popErrorScope();
+
+    // requestAnimationFrame(render);
 }
 
 function updateTransformArray(array) {
