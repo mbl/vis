@@ -13,8 +13,6 @@ layout(location = 2) in vec4 color;
 layout(location = 0) out vec4 fragColor;
 
 void main() {
-    fragColor = color;
-
     float a1 = uniforms.xzAngle;
     float a2 = uniforms.xwAngle;
     float a3 = uniforms.ywAngle;

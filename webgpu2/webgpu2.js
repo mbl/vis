@@ -3,6 +3,7 @@ import { generateData } from '../generateData.js';
 export const triangleAttributeNum = 0;
 export const positionAttributeNum = 1;
 export const colorAttributeNum = 2;
+
 export const transformBindingNum = 0;
 
 if (!navigator.gpu || GPUBufferUsage.COPY_SRC === undefined)
