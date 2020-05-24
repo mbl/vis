@@ -39,17 +39,19 @@ let projectionMatrix = new Float32Array([
     1  , 0  , 0  , 0, // x is multiplied by <---
     0  , 1  , 0  , 0, // y
     0  , 0  , 0.1 , 1, // z
-    0  , 0  , 0.2 , 1.5  // w = 1.0
+    0  , 0  , 0.2 , 1.5  // w = 1.0`
 ]);
 
 const colorOffset = 4 * 4;
 const vertexSize = 4 * 8;
-const numInstances = 10000;
+const numInstances = 1000000;
 const verticesArray = generateData(numInstances);
 
 async function checkError(label) {
     const error = await device.popErrorScope();
-    if (error) console.log(`${label}: ${error.message}`);
+    if (error) { 
+        console.log(`${label}: ${error.message}`);
+    }
     device.pushErrorScope('validation');
 }
 
@@ -67,36 +69,16 @@ async function init() {
 
     const context = canvas.getContext('gpupresent');
 
-    const swapChainDescriptor = {
+    swapChain = context.configureSwapChain({
         device: device,
         format: "bgra8unorm"
-    };
-    swapChain = context.configureSwapChain(swapChainDescriptor);
-
-    const vertexShaderCode = new Uint32Array(await fetch('main.vert.spv').then(response => response.arrayBuffer()));
-    const fragmentShaderCode = new Uint32Array(await fetch('main.frag.spv').then(response => response.arrayBuffer()));
-
-    const vertexShaderModule = device.createShaderModule(
-        {
-            code: vertexShaderCode
-        }
-    );
-
-    await checkError('createShaderModule vertex ');
-
-    const fragmentShaderModule = device.createShaderModule(
-        {
-            code: fragmentShaderCode 
-        }
-    );
-
-    await checkError('createShaderModule fragment');
+    });
 
     // Instance buffer
     let verticesArrayBuffer;
     [verticesBuffer, verticesArrayBuffer] = device.createBufferMapped({
         size: verticesArray.byteLength,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+        usage: GPUBufferUsage.VERTEX
     });
 
     const verticesWriteArray = new Float32Array(verticesArrayBuffer);
@@ -118,39 +100,6 @@ async function init() {
 
     await checkError('triangle buffer');
 
-    // Vertex Input
-    const triangleBufferDescriptor = {
-        attributeSet: [
-            {
-                shaderLocation: triangleAttributeNum,
-                offset: 0,
-                format: "float2"
-            }
-        ],
-        arrayStride: 2 * 4,
-        stepMode: "vertex"
-    };
-
-    const vertexBufferDescriptor = {
-        attributeSet: [
-            {
-                shaderLocation: positionAttributeNum,
-                offset: 0,
-                format: "float4"
-            }, 
-            {
-                shaderLocation: colorAttributeNum,
-                offset: colorOffset,
-                format: "float4"
-            }
-        ],
-        arrayStride: vertexSize,
-        stepMode: "instance"
-    };  
-    const vertexInputDescriptor = {
-        vertexBuffers: [vertexBufferDescriptor, triangleBufferDescriptor]
-    };
-
     // Bind group binding layout
     bindGroupLayout = device.createBindGroupLayout({
         entries: [
@@ -165,18 +114,30 @@ async function init() {
     await checkError('createBindGroupLayout');
 
     // Pipeline
-    const depthStateDescriptor = {
-        depthWriteEnabled: true,
-        depthCompare: "less",
-        format: "depth24plus-stencil8",
-    };
-
     const pipelineLayout = device.createPipelineLayout({ 
         bindGroupLayouts: [bindGroupLayout] 
     });
 
     await checkError('createPipelineLayout');
 
+    const vertexShaderCode = new Uint32Array(await fetch('main.vert.spv').then(response => response.arrayBuffer()));
+    const fragmentShaderCode = new Uint32Array(await fetch('main.frag.spv').then(response => response.arrayBuffer()));
+
+    const vertexShaderModule = device.createShaderModule(
+        {
+            code: vertexShaderCode
+        }
+    );
+
+    await checkError('createShaderModule vertex ');
+
+    const fragmentShaderModule = device.createShaderModule(
+        {
+            code: fragmentShaderCode 
+        }
+    );
+
+    await checkError('createShaderModule fragment');
     const vertexStageDescriptor = {
         module: vertexShaderModule,
         entryPoint: "main"
@@ -185,77 +146,89 @@ async function init() {
         module: fragmentShaderModule,
         entryPoint: "main"
     };
-    const colorState = {
-        format: "bgra8unorm",
-        alphaBlend: {
-            srcFactor: "src-alpha",
-            dstFactor: "one-minus-src-alpha",
-            operation: "add"
-        },
-        colorBlend: {
-            srcFactor: "src-alpha",
-            dstFactor: "one-minus-src-alpha",
-            operation: "add"
-        },
-        writeMask: GPUColorWrite.ALL
-    };
-    const pipelineDescriptor = {
+    
+    pipeline = device.createRenderPipeline({
         layout: pipelineLayout,
 
         vertexStage: vertexStageDescriptor,
         fragmentStage: fragmentStageDescriptor,
 
         primitiveTopology: "triangle-list",
-        colorStates: [colorState],
-        depthStencilState: depthStateDescriptor,
-        vertexInput: vertexInputDescriptor
-    };
-    pipeline = device.createRenderPipeline(pipelineDescriptor);
+        depthStencilState: {
+            depthWriteEnabled: true,
+            depthCompare: "less",
+            format: "depth24plus-stencil8",
+        },
+        vertexState: {
+            vertexBuffers: [{
+                arrayStride: vertexSize,
+                stepMode: "instance",
+                
+                attributes: [{
+                    shaderLocation: positionAttributeNum,
+                    offset: 0,
+                    format: "float4"
+                }, {
+                    shaderLocation: colorAttributeNum,
+                    offset: colorOffset,
+                    format: "float4"
+                }],
+            }, 
+            {
+                arrayStride: 2 * 4,
+                stepMode: "vertex",
+                attributes: [
+                    {
+                        shaderLocation: triangleAttributeNum,
+                        offset: 0,
+                        format: "float2"
+                    }
+                ],
+            }]
+        },
+        rasterizationState: {
+            cullMode: 'back',
+        },
+        colorStates: [{
+            format: "bgra8unorm",
+        }]
+    });
 
     await checkError('createRenderPipeline');
-
-    let colorAttachment = {
-        // attachment is acquired in render loop.
-        loadOp: "clear",
-        storeOp: "store",
-        loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 } // GPUColor
-    };
 
     // Depth stencil texture
 
     // GPUExtent3D
-    const depthSize = {
-        width: canvas.width,
-        height: canvas.height,
-        depth: 1
-    };
-
-    const depthTextureDescriptor = {
-        size: depthSize,
-        mipLevelCount: 1,
-        sampleCount: 1,
-        dimension: "2d",
-        format: "depth24plus-stencil8",
-        usage: GPUTextureUsage.OUTPUT_ATTACHMENT
-    };
-
-    const depthTexture = device.createTexture(depthTextureDescriptor);
+    const depthTexture = device.createTexture(
+        {
+            size: {
+                width: canvas.width,
+                height: canvas.height,
+                depth: 1
+            },
+            format: "depth24plus-stencil8",
+            usage: GPUTextureUsage.OUTPUT_ATTACHMENT
+        }
+    );
 
     await checkError('depthTextureDescriptor');
 
     // GPURenderPassDepthStencilAttachmentDescriptor
-    const depthAttachment = {
-        attachment: depthTexture.createView(),
-        depthLoadOp: "clear",
-        depthStoreOp: "store",
-        depthLoadValue: 1.0,
-        stencilLoadValue: 0,
-        stencilStoreOp: "store",
-    };
-
     renderPassDescriptor = {
-        colorAttachments: [colorAttachment],
-        depthStencilAttachment: depthAttachment
+        colorAttachments: [{
+            // attachment is acquired in render loop.
+            attachment: undefined,
+
+            loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 } // GPUColor
+        }],
+        depthStencilAttachment: {
+            attachment: depthTexture.createView(),
+
+            depthStoreOp: "store",
+            depthLoadValue: 1.0,
+            stencilLoadValue: 0,
+            stencilStoreOp: "store",
+        }
     };
 
     const error = await device.popErrorScope();
@@ -272,19 +245,11 @@ const transformBufferDescriptor = {
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 };
 
-let mappedGroups = [];
-
 async function render() {
     device.pushErrorScope('validation');
     device.pushErrorScope('out-of-memory');
-    if (mappedGroups.length === 0) {
-        const [buffer, arrayBuffer] = device.createBufferMapped(transformBufferDescriptor);
-        const group = device.createBindGroup(createBindGroupDescriptor(buffer));
-        let mappedGroup = { buffer: buffer, arrayBuffer: arrayBuffer, bindGroup: group };
-        await drawCommands(mappedGroup);
-    } else {
-        await drawCommands(mappedGroups.shift());
-    }
+
+    await drawCommands();
 
     let error = await device.popErrorScope();
     if (error) console.log(error);
@@ -311,50 +276,59 @@ function createBindGroupDescriptor(transformBuffer) {
     };
 }
 
-async function drawCommands(mappedGroup) {
-    device.pushErrorScope('validation');
-    updateTransformArray(new Float32Array(mappedGroup.arrayBuffer));
-    mappedGroup.buffer.unmap();
+function drawCommands() {
+    // device.pushErrorScope('validation');
+
+    const [buffer, arrayBuffer] = device.createBufferMapped(transformBufferDescriptor);
+    const group = device.createBindGroup(createBindGroupDescriptor(buffer));
+
+    updateTransformArray(new Float32Array(arrayBuffer));
+    buffer.unmap();
     
-    await checkError('updateTransformArray');
+    // await checkError('updateTransformArray');
+
+    const colorTexture = swapChain.getCurrentTexture().createView();
+    renderPassDescriptor.colorAttachments[0].attachment = colorTexture;
 
     const commandEncoder = device.createCommandEncoder();
 
-    await checkError('createCommandEncoder');
+    // await checkError('createCommandEncoder');
 
-    renderPassDescriptor.colorAttachments[0].attachment = swapChain.getCurrentTexture().createView();
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
-    await checkError('beginRenderPass');
+    // await checkError('beginRenderPass');
 
     // Encode drawing commands
 
     passEncoder.setPipeline(pipeline);
+
+
     // Vertex attributes
     passEncoder.setVertexBuffer(0, verticesBuffer, 0);
+
+
     passEncoder.setVertexBuffer(1, trianglesBuffer, 0);
+
     // Bind groups
-    passEncoder.setBindGroup(bindGroupIndex, mappedGroup.bindGroup);
+    passEncoder.setBindGroup(bindGroupIndex, group);
 
     // vertices, instances, first vertex, first instance
     passEncoder.draw(6, numInstances, 0, 0);
+
+
     passEncoder.endPass();
 
-    await checkError('passEncode endPass');
+    // await checkError('passEncode endPass');
 
     device.defaultQueue.submit([commandEncoder.finish()]);
 
-    await checkError('defaultQueue.submit');
+    // await checkError('defaultQueue.submit');
 
-    // Ready the current buffer for update after GPU is done with it.
-    mappedGroup.buffer.mapWriteAsync().then((arrayBuffer) => {
-        mappedGroup.arrayBuffer = arrayBuffer;
-        mappedGroups.push(mappedGroup);
-    });
+    // device.popErrorScope();
 
-    device.popErrorScope();
+    buffer.destroy();
 
-    // requestAnimationFrame(render);
+    requestAnimationFrame(render);
 }
 
 function updateTransformArray(array) {

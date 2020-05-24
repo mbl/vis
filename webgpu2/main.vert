@@ -32,6 +32,6 @@ void main() {
 
     gl_Position = uniforms.modelViewProjectionMatrix *
         vec4(tx, ty, tz, 1.0);
-    gl_Position.xy += triangle * 0.002;
+    gl_Position.xy += triangle * 0.003;
     fragColor = color;
 }
