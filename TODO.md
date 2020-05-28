@@ -14,3 +14,46 @@ Interesting
 
 Visual Programming
 
+- simple json output describing the graph
+- good UX when editing
+- good design
+- support nodes & ports
+    - node is something that does work
+    - port is input/output
+- do not be invasive
+    - my code can be more or less independent on this visual editor
+- minimal dependencies
+- rendering technologies (not the end of the world)
+    - webgl based (?)
+    - canvas based - not SVG
+
+Nice to have
+    - integrated to an IDE
+
+Kinds of coding
+    - simple dataflow programming (chaining pure functions)
+    - control flow - for loops
+    - graph can be be programatically generated
+
+Layout
+    - automatically align
+    - create subgraphs
+    - create groups (several nodes that move together)
+
+Nodes
+    - context menu configuring the node
+        - add/remove ports
+    - live preview of data
+    - collapse/expand node
+    - quickly create - search for node context menu?
+    - detailed attributes page support
+    - display status
+
+Ports
+    - color-coded by type
+    - collapse/expand Vec4 -> 4 components and back
+
+
+Watch for inspiration:
+https://www.youtube.com/watch?v=WjJdaDXN5Vs
+- React, RxJS
