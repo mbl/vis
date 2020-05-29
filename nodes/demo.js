@@ -19,10 +19,14 @@ function draw(ctx) {
         ctx.drawLine(0, i, fullCellSize, i, (i % (8 * cellSize) !== 0) ? '#353535' : '#1c1c1c');
     }
 
-    node(ctx, 10, 10, 300, 150);
+    const time = Date.now();
+    for (let i = 0; i < 100; i++) {
+        node(ctx, 10 + (i % 10) * 90, Math.trunc(i / 10) * 90 +  100 + Math.sin(time / 1000.0) * 100, 80, 80);
+    }
     node(ctx, 400, 50, 100, 100);
+    ctx.requestRedraw();
 }
 
 const canvas = document.getElementById('container');
-const ctx = new Context(canvas.getContext('2d', { alpha: false }));
-draw(ctx);
+const ctx = new Context(canvas.getContext('2d', { alpha: false }), () => draw(ctx));
+ctx.requestRedraw();

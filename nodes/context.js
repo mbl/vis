@@ -1,9 +1,15 @@
+import { TextureCache } from './textureCache.js';
+
 export class Context {
     /**
      * @param {CanvasRenderingContext2D} ctx Canvas context
+     * @param {() => void} draw Function to redraw everything
      */
-    constructor(ctx) {
+    constructor(ctx, draw) {
         this.ctx = ctx;
+        this.draw = draw;
+        this.redrawRequested = false;
+        this.textureCache = new TextureCache();
     }
 
     drawLine(x1, y1, x2, y2, color) {
@@ -19,10 +25,9 @@ export class Context {
         this.ctx.fillRect(x, y, w, h);
     }
 
-    nineSlicePlane(x, y, w, h, texture, left, right, top, bottom) {
-        var img = new Image();   // Create new img element
-        img.src = texture;
-        img.onload = () => {
+    nineSlicePlane(x, y, w, h, texture, left, top, right, bottom) {
+        var img = this.textureCache.getImage(this, texture);
+        if (img) {
             const iw = img.width;
             const ih = img.height;
             
@@ -43,6 +48,19 @@ export class Context {
             this.ctx.drawImage(img, 0, ih - bottom, left, bottom, x, y + h - bottom, left, bottom);
             this.ctx.drawImage(img, left, ih - bottom, iwm, bottom, x + left, y + h - bottom, swm, bottom);
             this.ctx.drawImage(img, iw - right, ih - bottom, right, bottom, x + w - right, y + h - bottom, right, bottom);
-        };
+        }
+    }
+
+    /**
+     * Ask for screen redraw.
+     */
+    requestRedraw() {
+        if (!this.redrawRequested) {
+            this.redrawRequested = true;
+            requestAnimationFrame(() => { 
+                this.redrawRequested = false;
+                this.draw();
+            });
+        }
     }
 }
