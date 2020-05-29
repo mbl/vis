@@ -1,7 +1,15 @@
+export const config = {
+  backgroundColor: '#000000',
+  color: (i, wv) => `rgb(${i % 256}, ${(i / 15) % 150}, ${(wv + 0.5) * 255})`,
+  width: 600,
+  height: 600,
+  numRectangles: 5000,
+};
+
 // My macbook is 2560 x 1600 retina, but the browser chrome takes some space
 // and for streaming I only use part of my window. So 600 x 600 is a reasonable default
 // canvas size.
-function init(elementId = 'container', width = 600, height = 600) {
+function init(elementId = 'container', width = config.width, height = config.height) {
   const div = document.getElementById(elementId);
 
   const canvas = document.createElement("canvas");
@@ -9,7 +17,7 @@ function init(elementId = 'container', width = 600, height = 600) {
   canvas.width = width * window.devicePixelRatio;
   canvas.height = height * window.devicePixelRatio;
   // canvas.style.willChange = 'content';
-  canvas.style.backgroundColor = 'black';
+  canvas.style.backgroundColor = config.backgroundColor;
   canvas.style.width = `${width}px`;
   canvas.style.height = `${height}px`;
   canvas.style.imageRendering = 'pixelated';
@@ -60,7 +68,7 @@ function generateData(ctx, num = 1) {
     const wv = sigmoid(Math.random() - 0.5);
     w.push(wv);
 
-    color.push(`rgb(${i % 256}, ${(i / 15) % 150}, ${(wv + 0.5) * 255})`);
+    color.push(config.color(i, wv));
   }
 
   return {
@@ -78,7 +86,7 @@ function draw(ctx, data) {
   const timeSeconds = time / 10000;
 
   const c = ctx.context;
-  c.fillStyle = '#000000';
+  c.fillStyle = config.backgroundColor;
   c.fillRect(0, 0, ctx.width, ctx.height);
   c.fillStyle = 'red';
 
@@ -145,11 +153,9 @@ function draw(ctx, data) {
   }
 }
 
-function run() {
-  const numRectangles = 5000;
-
-  const ctx = init('container', 600, 600);
-  const data = generateData(ctx, numRectangles);
+export function run() {
+  const ctx = init('container');
+  const data = generateData(ctx, config.numRectangles);
 
   function loop() {
     // Take inputs from user
@@ -164,5 +170,3 @@ function run() {
 
   requestAnimationFrame(loop);
 }
-
-run();

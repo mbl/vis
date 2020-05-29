@@ -1,21 +1,66 @@
 <html>
 <head>
-    <title>Visualization Sandbox</title>
+    <title>DataFlow Visualization on the Web</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Montserrat|Montserrat:bold|Montserrat Alternates">
     <style type="text/css">
-        body { background: black; color: whitesmoke; font-family: Arial }
-        a { color: wheat }
-        a:visited { color: darkorange }
+        body { 
+            background: #354147; 
+            color: whitesmoke; 
+            font-family: Montserrat; 
+            font-size: 18px; 
+            max-width: 800px; 
+            line-height: 26px;
+        }
+        h1, h2 { font-family: Montserrat Alternates }
+        h1 { font-size: 3em; margin-top: 1em; }
+        h2 { margin-top: 2em; }
+        p { margin-left: 6em; }
+        ul { margin-left: 5em; }
+        ul { list-style: none; }
+        li::before {
+            content: "▶"; 
+            color: #111111; 
+            display: inline-block; 
+            width: 1.5em;
+            margin-left: -1em;
+            line-height: 0px; }
+        li { margin-top: 1em; }
+        a { color: #ff4a00; font-weight: 600; }
+        a:visited { color: #ff4a00 }
+        .big { 
+            color: #111111;
+            font-size: 4em;
+            width: 90px;
+            display: block;
+            float: left;
+            position: relative;
+            top: 26px;
+            text-align: right;
+            margin-right: 20px;
+        }
     </style>
+    <script src="effect.js" type="module"></script>
 </head>
 <body>
-<h1>Visualization Sandbox</h1>
+<h1><img src="mbalatoon.png" style="width: 100px; float: left;">DataFlow Visualization</h1>
 
-<p>I am playing with data visualization techniques, showing a 4D
-dataset using different technologies.</p>
+<p>I want to do performant, interactive data visualization on the web.</p>
 
-<p>
-    See for now:
+<p>I want to take as large dataset as possible, and create an interactive program that displays this data.</p>
+
+<p>Interactive means more than just zoom / pan / select.
+    I would like to allow for dynamic change of all kinds of parameters.
 </p>
+
+<p>Performant means a million datapoints at 60fps on a 2015 MacBook Pro.</p>
+
+<h2><span class='big'>1</span> Investigate Technologies</h2>
+
+<div id="container" style="position: absolute; left: 400px; z-index: -1;"></div>
+
+<p>I picked a very simple, yet not 100% trivial problem
+    - display a 4D dataset.</p>
+<p>My goal is to display as many points as I can, interactively.</p>
 
 <ul>
     <li><a href="canvas/index.html">Canvas</a></li>
@@ -24,10 +69,67 @@ dataset using different technologies.</p>
     <li><a href="wasm/index.html">WebAssembly</a></li>
     <li><a href="webgpu/index.html">WebGPU</a> (Safari Technology Preview)</li>
     <li><a href="webgpu2/index.html">WebGPU</a> (Chrome Canary)</li>
-    <li><a href="">Unity</a> - TODO</li>
-    <li><a href="">Unreal</a> - TODO</li>
+</ul>
+
+
+<h2><span class='big'>2</span> See What the Masters are Doing</h2>
+
+<p>Who does performant graphics on the web? Why, game engines of course.</p>
+
+<p>Try to implement my program in Unity / Unreal, deploy to web, see how well it performs.</p>
+
+<ul>
+    <li><b>Unity</b> - Visual Effect Graph (download <a href="unity/tesseract.unitypackage">Tesseract.unitypackage</a>)</li>
+    <li><b>Unity</b> - Particle System (deployed to the web, <i>TODO</i>)</li>
+    <li><b>Unreal</b> - <i>TODO</i></li>
+</ul>
+
+
+<h2><span class='big'>3</span> The UI</h2>
+
+<p>Let's start with the flashiest part - a dataflow, visual programming,
+    node editor inspired by the looks of Unreal Blueprint editor.
+</p>
+
+<p>This is an important first step when selling this idea to people.
+   So let's do the node editor justice.
+</p>
+
+<p>Once I have a nice visual editor, the whole idea of this setup
+    would become more apparent than if I started with amazing backend,
+    yet did not allow people to experiment easily.
+</p>
+
+<ul>
     <li><a href="nodes/index.html">Node editor</a></li>
 </ul>
+
+
+<h2><span class='big'>4</span> The Interpreter</h2>
+
+<p><i>TODO</i></p>
+
+<p>Once I can define node graph, I can start executing it.</p>
+
+<p>Implement a simple interpreter that can take the nodes and 
+    connections between them and make the data flow, displaying the result.
+</p>
+
+
+<h2><span class='big'>5</span> The Compiler</h2>
+
+<p><i>TODO</i></p>
+
+<p>To optimize the program, some sort of compilation has
+    to happen.</p>
+
+<p>Implement an optimizing "compiler" that can
+    take the input graph and produces some sort of object
+    that performs what the user requested.
+</p>
+
+
+<h2><span class='big'>+</span>Join the Adventure!</h2>
 
 <p>
 <a href="https://twitch.tv/mmbala">Follow me on Twitch</a><br/>
