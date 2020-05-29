@@ -13,6 +13,11 @@ import { Context } from './context.js';
 export function node(ctx, x, y, w, h, color, selected=false) {
     const titleHeight = 30;
 
+    const { x: mx, y: my } = ctx.getMouse();
+    if (mx >= x && my >= y && mx <= x + w && my <= y + h) {
+        selected = true;
+    }
+
     if (selected) {
         ctx.nineSlicePlane(x - 13, y - 13, w + 26, h + 26, 'assets/RegularNode_shadow_selected.png', 21, 21, 21, 21);
     }

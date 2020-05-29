@@ -10,6 +10,18 @@ export class Context {
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
+
+        canvas.onmousemove = (event) => {
+            const rect = canvas.getBoundingClientRect();
+            this.mouse.x = event.clientX - rect.left;
+            this.mouse.y = event.clientY - rect.top;
+        }
+
+        canvas.onmouseout = (event) => {
+            this.mouse.x = NaN;
+            this.mouse.y = NaN;
+        }
+
         div.appendChild(canvas);
         const ctx = canvas.getContext('2d', { alpha: false });
 
@@ -18,6 +30,11 @@ export class Context {
         this.redrawRequested = false;
         this.textureCache = new TextureCache();
         this.assetPrefix = assetPrefix;
+
+        this.mouse = {
+            x: 0,
+            y: 0,
+        };
     }
 
     drawLine(x1, y1, x2, y2, color) {
@@ -70,5 +87,9 @@ export class Context {
                 this.draw();
             });
         }
+    }
+
+    getMouse() {
+        return this.mouse;
     }
 }

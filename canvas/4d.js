@@ -82,7 +82,6 @@ function generateData(ctx, num = 1) {
 
 function draw(ctx, data) {
   const time = Date.now();
-
   const timeSeconds = time / 10000;
 
   const c = ctx.context;
@@ -140,16 +139,6 @@ function draw(ctx, data) {
       (px | 0),
       (py | 0),
       3, 3);
-  }
-
-  const endTime = Date.now();
-  frameInMs += endTime - time;
-  numMeasurements += 1;
-
-  if (numMeasurements % 60 === 0) {
-    console.log(frameInMs / numMeasurements);
-    numMeasurements = 0;
-    frameInMs = 0;
   }
 }
 
