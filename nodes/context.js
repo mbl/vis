@@ -2,14 +2,22 @@ import { TextureCache } from './textureCache.js';
 
 export class Context {
     /**
-     * @param {CanvasRenderingContext2D} ctx Canvas context
+     * @param {string} elementId Id of element to put the context into
      * @param {() => void} draw Function to redraw everything
      */
-    constructor(ctx, draw) {
+    constructor(elementId, width, height, draw, assetPrefix = '') {
+        const div = document.getElementById(elementId);
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        div.appendChild(canvas);
+        const ctx = canvas.getContext('2d', { alpha: false });
+
         this.ctx = ctx;
         this.draw = draw;
         this.redrawRequested = false;
         this.textureCache = new TextureCache();
+        this.assetPrefix = assetPrefix;
     }
 
     drawLine(x1, y1, x2, y2, color) {
@@ -26,7 +34,7 @@ export class Context {
     }
 
     nineSlicePlane(x, y, w, h, texture, left, top, right, bottom, tint) {
-        var img = this.textureCache.getImage(this, texture, tint);
+        var img = this.textureCache.getImage(this, `${this.assetPrefix}${texture}`, tint);
         if (img) {
             const iw = img.width;
             const ih = img.height;

@@ -32,6 +32,5 @@ function draw(ctx) {
     ctx.requestRedraw();
 }
 
-const canvas = document.getElementById('container');
-const ctx = new Context(canvas.getContext('2d', { alpha: false }), () => draw(ctx));
+const ctx = new Context('container', 1000, 600, () => draw(ctx));
 ctx.requestRedraw();
