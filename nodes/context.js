@@ -25,8 +25,8 @@ export class Context {
         this.ctx.fillRect(x, y, w, h);
     }
 
-    nineSlicePlane(x, y, w, h, texture, left, top, right, bottom) {
-        var img = this.textureCache.getImage(this, texture);
+    nineSlicePlane(x, y, w, h, texture, left, top, right, bottom, tint) {
+        var img = this.textureCache.getImage(this, texture, tint);
         if (img) {
             const iw = img.width;
             const ih = img.height;
