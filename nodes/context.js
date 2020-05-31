@@ -1,5 +1,10 @@
 import { TextureCache } from './textureCache.js';
+import { colorARGBToCSS } from './tools/colors.js';
+import { ports } from './ports.js';
 
+/**
+ * Drawing / hitTesting / other querying context
+ */
 export class Context {
     /**
      * @param {string} elementId Id of element to put the context into
@@ -11,6 +16,14 @@ export class Context {
         canvas.width = width;
         canvas.height = height;
 
+        canvas.onmousedown = (event) => {
+            this.mouse.mouseDown = true;
+        }
+
+        canvas.onmouseup = (event) => {
+            this.mouse.mouseUp = true;
+        }
+
         canvas.onmousemove = (event) => {
             const rect = canvas.getBoundingClientRect();
             this.mouse.x = event.clientX - rect.left;
@@ -20,6 +33,8 @@ export class Context {
         canvas.onmouseout = (event) => {
             this.mouse.x = NaN;
             this.mouse.y = NaN;
+            this.mouse.mouseDown = false;
+            this.mouse.mouseUp = false;
         }
 
         div.appendChild(canvas);
@@ -30,14 +45,49 @@ export class Context {
         this.redrawRequested = false;
         this.textureCache = new TextureCache();
         this.assetPrefix = assetPrefix;
+        
+        // When true, context is in a hit-test only mode
+        // does not draw, just remembers what the hit test was
+        this.hitTest = false;
 
+        // When true, context is capturing layout information
+        this.layout = false;
+
+        // As hit testing progresses, the result is set to here
+        this.hitTestResult = null;
+        this.hitTestNoiseThreshold = 5; // How precisely user positions mouse usually
+        this.hitTestMaxDistance = 5;
+
+        // Input status
         this.mouse = {
             x: 0,
             y: 0,
+            mouseDown: false,
+            mouseUp: false,
         };
+
+        // Other data
+        this.time = Date.now();
     }
 
-    drawLine(x1, y1, x2, y2, color) {
+    isDrawing() {
+        return !this.hitTest && !this.layout;
+    }
+
+    pixel(x, y, color) {
+        if (!this.isDrawing()) {
+            return;
+        }
+        this.ctx.fillStyle = colorARGBToCSS(color);
+        this.ctx.fillRect(x, y, 1, 1);
+    }
+
+    // Drawing commands ---
+    drawLine(x1, y1, x2, y2, color, lineWidth=1) {
+        if (!this.isDrawing()) {
+            return;
+        }
+        this.ctx.lineWidth = lineWidth;
         this.ctx.strokeStyle = color;
         this.ctx.beginPath();
         this.ctx.moveTo(x1, y1);
@@ -46,11 +96,31 @@ export class Context {
     }
 
     drawRect(x, y, w, h, fill) {
+        if (!this.isDrawing()) {
+            return;
+        }
         this.ctx.fillStyle = fill;
         this.ctx.fillRect(x, y, w, h);
     }
 
+    sprite(x, y, texture, tint = null) {
+        if (!this.isDrawing()) {
+            return;
+        }
+        var img = this.textureCache.getImage(this, `${this.assetPrefix}${texture}`, tint);
+        if (img) {
+            this.ctx.drawImage(img, x, y);
+        }
+    }
+
+    /**
+     * @param {string} texture URL of the texture to load
+     * @param {number} tint uint32 defining ARGB
+     */
     nineSlicePlane(x, y, w, h, texture, left, top, right, bottom, tint) {
+        if (!this.isDrawing()) {
+            return;
+        }
         var img = this.textureCache.getImage(this, `${this.assetPrefix}${texture}`, tint);
         if (img) {
             const iw = img.width;
@@ -84,12 +154,61 @@ export class Context {
             this.redrawRequested = true;
             requestAnimationFrame(() => { 
                 this.redrawRequested = false;
+                this.time = Date.now();
                 this.draw();
             });
         }
     }
 
-    getMouse() {
-        return this.mouse;
+    // Hit testing ----------------------
+
+    /**
+     * Is mouse in given rectangle?
+     * @param {number} x 
+     * @param {number} y 
+     * @param {number} w 
+     * @param {number} h 
+     * @return {boolean} Hit test occurred
+     */
+    hitTestRect(x, y, w, h) {
+        return this.mouse.x >= x - this.hitTestMaxDistance && 
+        this.mouse.x < x + w + this.hitTestMaxDistance &&
+            this.mouse.y >= y - this.hitTestMaxDistance&& 
+            this.mouse.y < y + h + this.hitTestMaxDistance;
+    }
+
+    /**
+     * Return true if new hit test is better than old one.
+     */
+    betterHitTest(newTest, oldTest) {
+        if (oldTest.distance >= this.hitTestNoiseThreshold && 
+            newTest.distance < oldTest.distance) {
+                return true;
+            }
+
+        if (newTest.distance >= this.hitTestNoiseThreshold) {
+            return false;
+        }
+
+        return newTest.relDistance < oldTest.relDistance;
+    }
+
+    recordHitTest(type, id, distance, relDistance) {
+        if (this.hitTest) {
+            const hitTestData = {
+                type, id, distance, relDistance
+            };
+
+            if (this.hitTestResult === null || 
+                this.betterHitTest(hitTestData, this.hitTestResult)) {
+                this.hitTestResult = hitTestData;
+            }
+        }
+    }
+
+    // Layout ----------------------------
+    positionPort(portId, x, y) {
+        ports.x[portId] = x;
+        ports.y[portId] = y;
     }
 }

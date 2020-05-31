@@ -1,4 +1,5 @@
 import { Context } from './context.js';
+import { colorARGBToCSS } from './tools/colors.js';
 
 /**
  * Cache of loaded textures.
@@ -12,7 +13,7 @@ export class TextureCache {
     /**
      * @param {Context} ctx Drawing context to notify when image loads.
      * @param {string} url Url to load.
-     * @param {string} tint How to tint the image after loading
+     * @param {number} tint How to tint the image after loading (ARGB uint32)
      * @returns {Image} Loaded image (or null)
      */
     getImage(ctx, url, tint = null) {
@@ -44,10 +45,11 @@ export class TextureCache {
      * 
      * @param {Context} ctx 
      * @param {string} url 
-     * @param {string} color 
+     * @param {number} color ARGB uint32
      */
     getTintedImage(ctx, url, color) {
-        const key = `${url}#${color.toLowerCase()}`;
+        const colorString = color.toString(16);
+        const key = `${url}#${colorString}`;
         const entry = this.cache[key];
         if (entry) {
             return entry.image;
@@ -63,7 +65,7 @@ export class TextureCache {
             const tempContext = tempCanvas.getContext('2d');
             tempContext.drawImage(image, 0, 0);
             tempContext.globalCompositeOperation = 'multiply';
-            tempContext.fillStyle = color;
+            tempContext.fillStyle = colorARGBToCSS(color);
             tempContext.fillRect(0, 0, image.width, image.height);
             tempContext.globalCompositeOperation = 'destination-in';
             tempContext.drawImage(image, 0, 0);

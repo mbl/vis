@@ -1,36 +1,16 @@
 import { node } from './node.js';
 import { Context } from './context.js';
+import { grid } from './grid.js';
+import { addNode, nodes } from './nodes.js';
+import { loop } from './loop.js';
+import { addPort, ports } from './ports.js';
 
-/**
- * 
- * @param {Context} ctx 
- */
-function draw(ctx) {
-    ctx.drawRect(0, 0, 1000, 600, '#2a2a2a');
+// Define the plot
+const node1 = addNode(nodes, 1, 10, 10, 500, 200, 0xffff0000, 'Node 0');
+const node2 = addNode(nodes, 2, 300, 120, 200, 150, 0xff00ff00, 'Node 1');
 
-    const cellSize = 16;
-    const fullCellSize = 1000;
+const port1 = addPort(ports, node1, 1);
+const port2 = addPort(ports, node2, 2);
 
-    for (var i = 0; i < fullCellSize; i += cellSize) {
-        ctx.drawLine(i, 0, i, fullCellSize, (i % (8 * cellSize)) !== 0 ? '#353535' : '#1c1c1c');
-    }
-
-    for (var i = 0; i < fullCellSize; i += cellSize) {
-        ctx.drawLine(0, i, fullCellSize, i, (i % (8 * cellSize) !== 0) ? '#353535' : '#1c1c1c');
-    }
-
-    const time = Date.now();
-    for (let i = 0; i < 100; i++) {
-        node(ctx, 
-            10 + (i % 10) * 90 + Math.sin(i + time / 3000.0) * 20, 
-            Math.trunc(i / 10) * 85 + 100 + Math.sin(time / 4000.0) * 100 + Math.cos(i + time / 1000) * 10, 
-            80 + Math.sin(0.7 * i + time/ 600) * 5,
-            70 + Math.sin(0.3 * i + time/ 700) * 5,
-            `hsl(${i * 4}, 100%, 50%)`);
-    }
-    node(ctx, 400, 50, 100, 100, 'white', true);
-    ctx.requestRedraw();
-}
-
-const ctx = new Context('container', 1000, 600, () => draw(ctx));
+const ctx = new Context('container', 1000, 600, () => loop(ctx));
 ctx.requestRedraw();
