@@ -12,7 +12,7 @@ export class TextureCache {
     /**
      * @param {Context} ctx Drawing context to notify when image loads.
      * @param {string} url Url to load.
-     * @paran {string} tint How to tint the image after loading
+     * @param {string} tint How to tint the image after loading
      * @returns {Image} Loaded image (or null)
      */
     getImage(ctx, url, tint = null) {
