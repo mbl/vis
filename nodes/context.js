@@ -121,6 +121,24 @@ export class Context {
         }
     }
 
+    drawText(x, y, text) {
+        this.ctx.fillStyle = 'white';
+        this.ctx.fillText(text, x, y);
+    }
+
+    drawBezier(x1, y1, x2, y2, x3, y3, x4, y4, color, lineWidth = 1) {
+        if (!this.isDrawing()) {
+            return;
+        }
+        this.ctx.lineWidth = lineWidth;
+        this.ctx.strokeStyle = color;
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo(x1, y1);
+        this.ctx.bezierCurveTo(x2, y2, x3, y3, x4, y4);
+        this.ctx.stroke();
+    }
+
     /**
      * Ask for screen redraw.
      */

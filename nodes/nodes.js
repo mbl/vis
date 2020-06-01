@@ -2,7 +2,9 @@
  * Describes all the nodes in the scene
  */
 
-import { node } from "./node.js";
+import { drawBox, drawPort, titleHeight, portHeight } from "./draw.js";
+import { ports, addPort } from "./ports.js";
+import { getType, types } from "./types.js";
 
 export const nodes = initNodes();  
 
@@ -44,27 +46,63 @@ export function allocateNode(nodes) {
 
 /**
  * Register a node, return its index
+ * @param {string} type Type of the node
  */
-export function addNode(nodes, type, x, y, w, h, color, title) {
-    const i = allocateNode(nodes);
+export function addNode(nodes, type, x, y) {
+    const typeId = getType(type);
+    const typeInfo = types[typeId];
+    
+    const nodeId = allocateNode(nodes);
 
-    nodes.x[i] = x;
-    nodes.y[i] = y;
-    nodes.w[i] = w;
-    nodes.h[i] = h;
-    nodes.color[i] = color;
-    nodes.title[i] = title;
+    nodes.x[nodeId] = x;
+    nodes.y[nodeId] = y;
+    nodes.w[nodeId] = typeInfo.w;
+    nodes.h[nodeId] = titleHeight + typeInfo.ports.length * portHeight;
+    nodes.color[nodeId] = typeInfo.color;
+    nodes.title[nodeId] = typeInfo.title;
 
-    return i;
+    for(let portId = 0; portId < typeInfo.ports.length; portId++) {
+        const pi = typeInfo.ports[portId];
+        addPort(ports, nodeId, portId, pi.output, pi.label, pi.type);
+    }
+
+    return nodeId;
+}
+
+export function node(ctx, nodeId) {
+    const x = nodes.x[nodeId];
+    const y = nodes.y[nodeId];
+    const w = nodes.w[nodeId];
+    const h = nodes.h[nodeId];
+
+    drawBox(ctx, 
+        nodeId,
+        x, y, w, h, 
+        nodes.color[nodeId],
+        false,
+        nodes.title[nodeId]);
+
+    // TODO fix this is insane
+    let portNum = 0;
+    for (let portId = 1; portId <= ports.num; portId++) {
+        if (ports.nodeId[portId] === nodeId) {
+            const py = y + titleHeight + portNum * portHeight + 7; // + Math.sin(nodeId * Math.PI + ctx.time / 300.0) * 20;
+            portNum++;
+            if (!ports.output[portId]) {
+                drawPort(ctx, nodeId, portId, x + 8, py, 0xffcce00e, false);
+                ctx.drawText(x + 25, py + 9, ports.label[portId]);
+            }
+            else {
+                drawPort(ctx, nodeId, portId, x + w - 22, py, 0xffcce00e, false);
+                ctx.drawText(x + 8, py + 9, ports.label[portId]);
+            }
+        }
+    }
 }
 
 // Information about all the nodes being displayed
 export function drawNodes(ctx, nodes) {
     for(let i = 1; i <= nodes.num; i++) {
-        node(ctx, 
-            i,
-            nodes.x[i], nodes.y[i], nodes.w[i], nodes.h[i], 
-            nodes.color[i],
-            false);
+        node(ctx, i);
     }
 }

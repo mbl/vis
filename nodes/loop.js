@@ -2,6 +2,7 @@ import { grid } from "./grid.js";
 import { drawNodes, nodes } from "./nodes.js"
 import { Context } from "./context.js"
 import { ports } from "./ports.js";
+import { drawConnection } from "./draw.js";
 
 const state = {
     dragging: null,
@@ -79,35 +80,10 @@ function draw(ctx) {
  * @param {Context} ctx 
  */
 function connections(ctx) {
-    for (let i = 1; i <= ports.num; i+=2) {
+    for (let i = 1; i < ports.num; i+=2) {
         const offset = 30;
 
-        ctx.drawLine(
-            ports.x[i],
-            ports.y[i],
-            ports.x[i] - offset,
-            ports.y[i],
-            'white',
-            3
-        );
-
-        ctx.drawLine(
-            ports.x[i + 1],
-            ports.y[i + 1],
-            ports.x[i + 1] - offset,
-            ports.y[i + 1],
-            'white',
-            3
-        );
-
-        ctx.drawLine(
-            ports.x[i] - offset,
-            ports.y[i],
-            ports.x[i + 1] - offset,
-            ports.y[i + 1],
-            'white',
-            3
-        );
+        drawConnection(ctx, i, i+1);
     }
 }
 

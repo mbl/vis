@@ -5,9 +5,12 @@ export function initPorts() {
         allocated,
 
         nodeId: new Int32Array(allocated),
-        portId: new Int32Array(allocated),
+        portId: new Int32Array(allocated), // Unique within the node
         x: new Float32Array(allocated),
         y: new Float32Array(allocated),
+        output: new Int8Array(allocated),
+        label: new Array(allocated),
+        type: new Array(allocated),
     };
 }
 
@@ -24,11 +27,14 @@ export function allocatePort(ports) {
 /**
  * Register a node, return its index
  */
-export function addPort(ports, nodeId, portId) {
+export function addPort(ports, nodeId, portId, output, label, type) {
     const i = allocatePort(ports);
 
     ports.nodeId[i] = nodeId;
     ports.portId[i] = portId;
+    ports.output[i] = output;
+    ports.label[i] = label;
+    ports.type[i] = type;
 
     return i;
 }
