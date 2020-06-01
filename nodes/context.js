@@ -1,6 +1,7 @@
 import { TextureCache } from './textureCache.js';
 import { colorARGBToCSS } from './tools/colors.js';
 import { ports } from './ports.js';
+import { Mouse } from './mouse.js';
 
 /**
  * Drawing / hitTesting / other querying context
@@ -10,35 +11,17 @@ export class Context {
      * @param {string} elementId Id of element to put the context into
      * @param {() => void} draw Function to redraw everything
      */
-    constructor(elementId, width, height, draw, assetPrefix = '') {
+    constructor(elementId, width, height, draw, assetPrefix = '') {        
+        
         const div = document.getElementById(elementId);
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
 
-        canvas.onmousedown = (event) => {
-            this.mouse.mouseDown = true;
-        }
-
-        canvas.onmouseup = (event) => {
-            this.mouse.mouseUp = true;
-        }
-
-        canvas.onmousemove = (event) => {
-            const rect = canvas.getBoundingClientRect();
-            this.mouse.x = event.clientX - rect.left;
-            this.mouse.y = event.clientY - rect.top;
-        }
-
-        canvas.onmouseout = (event) => {
-            this.mouse.x = NaN;
-            this.mouse.y = NaN;
-            this.mouse.mouseDown = false;
-            this.mouse.mouseUp = false;
-        }
-
         div.appendChild(canvas);
         const ctx = canvas.getContext('2d', { alpha: false });
+
+        this.mouse = new Mouse(canvas);
 
         this.ctx = ctx;
         this.draw = draw;
@@ -57,14 +40,6 @@ export class Context {
         this.hitTestResult = null;
         this.hitTestNoiseThreshold = 5; // How precisely user positions mouse usually
         this.hitTestMaxDistance = 5;
-
-        // Input status
-        this.mouse = {
-            x: 0,
-            y: 0,
-            mouseDown: false,
-            mouseUp: false,
-        };
 
         // Other data
         this.time = Date.now();
