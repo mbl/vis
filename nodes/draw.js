@@ -51,11 +51,26 @@ export function drawBox(ctx, id, x, y, w, h, color, selected=false, label='') {
 export function drawPort(ctx, nodeId, portId, x, y, color, connected) {
     ctx.positionPort(portId, x + 7.5, y + 5.5);
 
+    const w = 15;
+    const h = 15;
+    if(ctx.hitTestRect(x, y, w, h)) {
+        ctx.recordHitTest('port', portId, 
+            distancePointToRectangle(ctx.mouse, x, y, w, h),
+            w * h
+        );
+    }
+
+    let actualColor = color;
+
+    if (ctx.hitTestResult && ctx.hitTestResult.type === 'port' && portId === ctx.hitTestResult.id) {
+        actualColor = 0xffffdd00;
+    }
+
     if (connected) {
-        ctx.sprite(x, y, 'assets/Pin_connected_VarA.png', color);
+        ctx.sprite(x, y, 'assets/Pin_connected_VarA.png', actualColor);
     }
     else {
-        ctx.sprite(x, y, 'assets/Pin_disconnected_VarA.png', color);
+        ctx.sprite(x, y, 'assets/Pin_disconnected_VarA.png', actualColor);
     }
 }
 

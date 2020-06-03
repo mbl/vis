@@ -2,21 +2,35 @@ import { grid } from "./grid.js";
 import { drawNodes, nodes } from "./nodes.js"
 import { Context } from "./context.js"
 import { ports } from "./ports.js";
-import { drawConnection } from "./draw.js";
+import { drawConnections, addConnection, connections } from "./connections.js";
 
 const state = {
+    currentOperation: null,
+
     dragging: null,
+    connecting: null,
 }
 
 /**
  * @param {Context} ctx Input context
  */
 export function loop(ctx) {
-    if (!state.dragging) {
+    if (!state.currentOperation) {
         hitTest(ctx);
+
+        checkStartConnecting(ctx);
+
+        if (state.currentOperation === null) {
+            checkStartDragging(ctx);
+        }
     }
 
-    drag(ctx);
+    if (state.currentOperation === 'dragging') {
+        drag(ctx);
+    }
+    else if (state.currentOperation === 'connecting') {
+        connect(ctx);
+    }
 
     layout(ctx);
 
@@ -36,9 +50,52 @@ function layout(ctx) {
     ctx.layout = false;
 }
 
-function drag(ctx) {
+function checkStartConnecting(ctx) {
+    if (ctx.mouse.mouseDown && ctx.hitTestResult && ctx.hitTestResult.type === 'port') {
+        state.currentOperation = 'connecting';
+        const portId = ctx.hitTestResult.id;
+
+        state.connecting = {
+            start: portId,
+            end: -1,
+            startIsOutput: ports.output[portId],
+        };
+    }
+}
+
+/**
+ * 
+ * @param {Context} ctx 
+ */
+function connect(ctx) {
+    hitTest(ctx);
+
+    if (ctx.hitTestResult && ctx.hitTestResult.type === 'port') {
+        state.connecting.end = ctx.hitTestResult.id;
+    }
+    else {
+        state.connecting.end = -1;
+    }
+
+    if (ctx.mouse.mouseUp) {
+        if (state.connecting.end !== -1) {
+            if (state.connecting.startIsOutput) {
+                addConnection(connections, state.connecting.start, state.connecting.end);
+            }
+            else {
+                addConnection(connections, state.connecting.end, state.connecting.start);
+            }
+        }
+
+        state.connecting = null;
+        state.currentOperation = null;
+    }
+}
+
+function checkStartDragging(ctx) {
     if (ctx.mouse.mouseDown && ctx.hitTestResult && ctx.hitTestResult.type === 'node') {
         const nodeId = ctx.hitTestResult.id;
+        state.currentOperation = 'dragging';
         state.dragging = {
             nodeId,
             startMouse: {
@@ -51,8 +108,12 @@ function drag(ctx) {
             }
         };
     }
+}
+
+function drag(ctx) {
     if (ctx.mouse.mouseUp) {
         state.dragging = null;
+        state.currentOperation = null;
     }
     if (state.dragging) {
         const nodeId = state.dragging.nodeId;
@@ -72,19 +133,8 @@ function hitTest(ctx) {
 
 function draw(ctx) {
     grid(ctx);
-    connections(ctx);
+    drawConnections(ctx, state);
     drawNodes(ctx, nodes);
-}
-
-/**
- * @param {Context} ctx 
- */
-function connections(ctx) {
-    for (let i = 1; i < ports.num; i+=2) {
-        const offset = 30;
-
-        drawConnection(ctx, i, i+1);
-    }
 }
 
 function debug(ctx) {

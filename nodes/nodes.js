@@ -106,3 +106,15 @@ export function drawNodes(ctx, nodes) {
         node(ctx, i);
     }
 }
+
+export function getNodePorts(nodeId) {
+    const result = []; // TODO figure out an iterator that does not alloc
+
+    for (let i = 1; i <= ports.num; i++) {
+        if (ports.nodeId[i] === nodeId) {
+            result.push(i);
+        }
+    }
+
+    return result;
+}

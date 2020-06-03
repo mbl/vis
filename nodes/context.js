@@ -58,6 +58,16 @@ export class Context {
     }
 
     // Drawing commands ---
+
+    /**
+     * 
+     * @param {*} x1 
+     * @param {*} y1 
+     * @param {*} x2 
+     * @param {*} y2 
+     * @param {string} color CSS color name
+     * @param {*} lineWidth 
+     */
     drawLine(x1, y1, x2, y2, color, lineWidth=1) {
         if (!this.isDrawing()) {
             return;
