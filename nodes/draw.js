@@ -63,25 +63,30 @@ export function drawConnection(ctx, portFromId, portToId) {
     const p1 = portFromId;
     const p2 = portToId;
 
-    // Direction: -1 from left, 1 - to right
-    const dir1 = -1 + 2 * ports.output[p1];
-    const dir2 = -1 + 2 * ports.output[p2];
-
-    const dx = Math.max(0, - (ports.x[p1] * dir1 + ports.x[p2] * dir2));
-    const h = 100; // overHang
- 
-    let offset = h;
-    if (dx <= h / 2) {
-        offset = h + Math.sqrt(h*h - 2 * h * dx);
+    // Weird heuristic attempting to make the result look good
+    let dx = ports.x[p2] - ports.x[p1]; // Delta x
+    if (Math.abs(dx) < 1e-3) {
+        dx = Math.sign(dx) * 1e-3;
     }
+
+    const h = 40; // "overhang" in pixels
+    const offsetA = Math.max(Math.min(dx / 2, h * 4), h * 2);
+
+    // Experimental values that roughly approximate exact solution to compute overhang based on offset
+    // hRel ~= (0.2979 * x + 0.1398)
+    // hRel ~= (0.0686 * x + 0.4438)
+
+    const x1 = (h - 0.1398 * dx) / 0.2979;
+    const x2 = (h - 0.4438 * dx) / 0.0686;
     
-    const offset1 = dir1 * offset;
-    const offset2 = dir2 * offset;
+    const offsetB = Math.min(x1, x2);
+    
+    const offset = Math.max(offsetA, offsetB);
     
     ctx.drawBezier(
         ports.x[p1], ports.y[p1],
-        ports.x[p1] + offset1, ports.y[p1],
-        ports.x[p2] + offset2, ports.y[p2],
+        ports.x[p1] + offset, ports.y[p1],
+        ports.x[p2] - offset, ports.y[p2],
         ports.x[p2], ports.y[p2],
         'white',
         3
