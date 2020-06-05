@@ -29,11 +29,24 @@ export function allocateConnection(connections) {
     // TODO reallocate the buffers as needed
 }
 
-export function addConnection(connections, from, to) {
-    const i = allocateConnection(connections);
+export function findConnection(connections, from, to) {
+    for (let i = 1; i <= connections.num; i++) {
+        if (connections.from[i] === from && connections.to[i] === to) {
+            return i;
+        }
+    }
+    return 0;
+}
 
-    connections.from[i] = from;
-    connections.to[i] = to;
+export function addConnection(connections, from, to) {
+    let i = findConnection(connections, from, to);
+
+    if (!i) {
+        i = allocateConnection(connections);
+
+        connections.from[i] = from;
+        connections.to[i] = to;
+    }
 
     return i;
 }
@@ -78,12 +91,22 @@ export function checkStartConnecting(ctx, state) {
     }
 }
 
+/** 
+ * Can two ports be connected to each other?
+ */
+export function portsCompatible(port1, port2) {
+    // TODO: typecheck
+    return ports.output[port1] !== ports.output[port2];
+}
+
 /**
  * 
  * @param {Context} ctx 
  */
 export function connect(ctx, state) {
-    if (ctx.hitTestResult && ctx.hitTestResult.type === 'port') {
+    if (ctx.hitTestResult && ctx.hitTestResult.type === 'port' &&
+        portsCompatible(ctx.hitTestResult.id, state.connecting.start)
+    ) {
         state.connecting.end = ctx.hitTestResult.id;
     }
     else {
