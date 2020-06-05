@@ -2,7 +2,7 @@ import { grid } from "./grid.js";
 import { drawNodes, nodes } from "./nodes.js"
 import { Context } from "./context.js"
 import { ports } from "./ports.js";
-import { drawConnections, addConnection, connections, checkStartConnecting, connect, portsCompatible } from "./connections.js";
+import { addConnection, connections, checkStartConnecting, connect, portsCompatible, drawConnections } from "./connections.js";
 
 const state = {
     currentOperation: null,
@@ -29,34 +29,7 @@ export function loop(ctx) {
         drag(ctx);
     }
     else if (state.currentOperation === 'connecting') {
-        hitTest(ctx);
-
-        // TODO: "hitTest fixing" function extract
-        if (ctx.hitTestResult && ctx.hitTestResult.type !== 'port') {
-            let compatiblePortId = 0;
-            if (ctx.hitTestResult.type === 'node') {
-                for (let i=1; i <= ports.num; i++) {
-                    if (ports.nodeId[i] === ctx.hitTestResult.id) {
-                        if (portsCompatible(i, state.connecting.start)) {
-                            if (compatiblePortId !== 0) {
-                                // I already found a compatible port, so there is ambiguity
-                                compatiblePortId = 0;
-                                break;
-                            }
-                            compatiblePortId = i;
-                        }
-                    }
-                }                
-            }
-            if (compatiblePortId) {
-                ctx.hitTestResult.type = 'port';
-                ctx.hitTestResult.id = compatiblePortId;
-            } 
-            else {
-                ctx.hitTestResult = null;
-            }
-        }
-
+        connectingHitTest(ctx);
         connect(ctx, state);
     }
 
@@ -115,6 +88,35 @@ function hitTest(ctx) {
     ctx.hitTestResult = null;
     drawNodes(ctx, nodes);
     ctx.hitTest = false;
+}
+
+function connectingHitTest(ctx) {
+    hitTest(ctx);
+
+    if (ctx.hitTestResult && ctx.hitTestResult.type !== 'port') {
+        let compatiblePortId = 0;
+        if (ctx.hitTestResult.type === 'node') {
+            for (let i=1; i <= ports.num; i++) {
+                if (ports.nodeId[i] === ctx.hitTestResult.id) {
+                    if (portsCompatible(i, state.connecting.start)) {
+                        if (compatiblePortId !== 0) {
+                            // I already found a compatible port, so there is ambiguity
+                            compatiblePortId = 0;
+                            break;
+                        }
+                        compatiblePortId = i;
+                    }
+                }
+            }
+        }
+        if (compatiblePortId) {
+            ctx.hitTestResult.type = 'port';
+            ctx.hitTestResult.id = compatiblePortId;
+        } 
+        else {
+            ctx.hitTestResult = null;
+        }
+    }
 }
 
 function draw(ctx) {

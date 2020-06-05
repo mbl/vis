@@ -1,4 +1,4 @@
-import { drawBox } from './nodes/draw.js';
+import { drawBox } from './nodes/nodes.js';
 import { Context } from './nodes/context.js';
 
 const w = 200;

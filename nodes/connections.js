@@ -1,5 +1,4 @@
 import { ports } from './ports.js';
-import { drawConnection } from './draw.js';
 
 export function initConnections() {
     const allocated = 1000;
@@ -52,6 +51,8 @@ export function addConnection(connections, from, to) {
 }
 
 /**
+ * Draw all existing connections including the one being currently created.
+ * 
  * @param {Context} ctx 
  */
 export function drawConnections(ctx, state) {
@@ -129,3 +130,40 @@ export function connect(ctx, state) {
 }
 
 export const connections = initConnections();
+
+/** 
+ * Draws a single connection between two ports.
+ */
+export function drawConnection(ctx, portFromId, portToId) {
+    const p1 = portFromId;
+    const p2 = portToId;
+
+    // Weird heuristic attempting to make the result look good
+    let dx = ports.x[p2] - ports.x[p1]; // Delta x
+    if (Math.abs(dx) < 1e-3) {
+        dx = Math.sign(dx) * 1e-3;
+    }
+
+    const h = 40; // "overhang" in pixels
+    const offsetA = Math.max(Math.min(dx / 2, h * 4), h * 2);
+
+    // Experimental values that roughly approximate exact solution to compute overhang based on offset
+    // hRel ~= (0.2979 * x + 0.1398)
+    // hRel ~= (0.0686 * x + 0.4438)
+
+    const x1 = (h - 0.1398 * dx) / 0.2979;
+    const x2 = (h - 0.4438 * dx) / 0.0686;
+    
+    const offsetB = Math.min(x1, x2);
+    
+    const offset = Math.max(offsetA, offsetB);
+    
+    ctx.drawBezier(
+        ports.x[p1], ports.y[p1],
+        ports.x[p1] + offset, ports.y[p1],
+        ports.x[p2] - offset, ports.y[p2],
+        ports.x[p2], ports.y[p2],
+        'white',
+        3
+    );
+}
