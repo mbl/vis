@@ -31,6 +31,7 @@ export function loop(ctx) {
     else if (state.currentOperation === 'connecting') {
         hitTest(ctx);
 
+        // TODO: "hitTest fixing" function extract
         if (ctx.hitTestResult && ctx.hitTestResult.type !== 'port') {
             let compatiblePortId = 0;
             if (ctx.hitTestResult.type === 'node') {
