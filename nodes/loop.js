@@ -2,7 +2,7 @@ import { grid } from "./grid.js";
 import { drawNodes, nodes } from "./nodes.js"
 import { Context } from "./context.js"
 import { ports } from "./ports.js";
-import { drawConnections, addConnection, connections } from "./connections.js";
+import { drawConnections, addConnection, connections, checkStartConnecting, connect } from "./connections.js";
 
 const state = {
     currentOperation: null,
@@ -18,7 +18,7 @@ export function loop(ctx) {
     if (!state.currentOperation) {
         hitTest(ctx);
 
-        checkStartConnecting(ctx);
+        checkStartConnecting(ctx, state);
 
         if (state.currentOperation === null) {
             checkStartDragging(ctx);
@@ -29,7 +29,8 @@ export function loop(ctx) {
         drag(ctx);
     }
     else if (state.currentOperation === 'connecting') {
-        connect(ctx);
+        hitTest(ctx);
+        connect(ctx, state);
     }
 
     layout(ctx);
@@ -48,48 +49,6 @@ function layout(ctx) {
     ctx.layout = true;
     draw(ctx);
     ctx.layout = false;
-}
-
-function checkStartConnecting(ctx) {
-    if (ctx.mouse.mouseDown && ctx.hitTestResult && ctx.hitTestResult.type === 'port') {
-        state.currentOperation = 'connecting';
-        const portId = ctx.hitTestResult.id;
-
-        state.connecting = {
-            start: portId,
-            end: -1,
-            startIsOutput: ports.output[portId],
-        };
-    }
-}
-
-/**
- * 
- * @param {Context} ctx 
- */
-function connect(ctx) {
-    hitTest(ctx);
-
-    if (ctx.hitTestResult && ctx.hitTestResult.type === 'port') {
-        state.connecting.end = ctx.hitTestResult.id;
-    }
-    else {
-        state.connecting.end = -1;
-    }
-
-    if (ctx.mouse.mouseUp) {
-        if (state.connecting.end !== -1) {
-            if (state.connecting.startIsOutput) {
-                addConnection(connections, state.connecting.start, state.connecting.end);
-            }
-            else {
-                addConnection(connections, state.connecting.end, state.connecting.start);
-            }
-        }
-
-        state.connecting = null;
-        state.currentOperation = null;
-    }
 }
 
 function checkStartDragging(ctx) {

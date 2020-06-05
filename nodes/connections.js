@@ -65,4 +65,44 @@ export function drawConnections(ctx, state) {
     }
 }
 
+export function checkStartConnecting(ctx, state) {
+    if (ctx.mouse.mouseDown && ctx.hitTestResult && ctx.hitTestResult.type === 'port') {
+        state.currentOperation = 'connecting';
+        const portId = ctx.hitTestResult.id;
+
+        state.connecting = {
+            start: portId,
+            end: -1,
+            startIsOutput: ports.output[portId],
+        };
+    }
+}
+
+/**
+ * 
+ * @param {Context} ctx 
+ */
+export function connect(ctx, state) {
+    if (ctx.hitTestResult && ctx.hitTestResult.type === 'port') {
+        state.connecting.end = ctx.hitTestResult.id;
+    }
+    else {
+        state.connecting.end = -1;
+    }
+
+    if (ctx.mouse.mouseUp) {
+        if (state.connecting.end !== -1) {
+            if (state.connecting.startIsOutput) {
+                addConnection(connections, state.connecting.start, state.connecting.end);
+            }
+            else {
+                addConnection(connections, state.connecting.end, state.connecting.start);
+            }
+        }
+
+        state.connecting = null;
+        state.currentOperation = null;
+    }
+}
+
 export const connections = initConnections();
