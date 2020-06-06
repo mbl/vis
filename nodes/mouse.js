@@ -22,7 +22,9 @@ export class Mouse {
     onMouseUp(event) {
         this.mouseUp = true;
         this.buttons = event.buttons;
-        
+        event.stopPropagation();        
+        event.preventDefault();
+
         document.removeEventListener("mousemove", this.onMouseMove);
         document.removeEventListener("mouseup", this.onMouseUp);
     }
@@ -30,6 +32,8 @@ export class Mouse {
     onMouseDown(event) {
         this.mouseDown = true;
         this.buttons = event.buttons;
+        event.stopPropagation();
+        event.preventDefault();
 
         document.addEventListener("mousemove", this.onMouseMove);
         document.addEventListener("mouseup", this.onMouseUp);
@@ -39,6 +43,8 @@ export class Mouse {
         const rect = this.canvas.getBoundingClientRect();
         this.x = event.clientX - rect.left;
         this.y = event.clientY - rect.top;
+        event.stopPropagation();
+        event.preventDefault();
     }
 
     init(canvas) {

@@ -9,6 +9,7 @@ export const types = [
                 output: 1,
                 label: 'value',
                 type: 'float32',
+                defaultValue: 0,
             }
         ]
     },

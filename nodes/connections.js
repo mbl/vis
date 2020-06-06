@@ -129,6 +129,19 @@ export function connect(ctx, state) {
     }
 }
 
+/**
+ * @param {number} portId 
+ * @return True if port is connected to anything.
+ */
+export function isPortConnected(portId) {
+    for (let i = 1; i <= connections.num; i++) {
+        if (connections.from[i] === portId || connections.to[i] === portId) {
+            return true;
+        }
+    }
+    return false;
+}
+
 export const connections = initConnections();
 
 /** 

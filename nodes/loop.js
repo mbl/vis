@@ -3,12 +3,14 @@ import { drawNodes, nodes } from "./nodes.js"
 import { Context } from "./context.js"
 import { ports } from "./ports.js";
 import { addConnection, connections, checkStartConnecting, connect, portsCompatible, drawConnections } from "./connections.js";
+import { checkStartEditing } from "./editor.js";
 
 const state = {
     currentOperation: null,
 
     dragging: null,
     connecting: null,
+    editing: null,
 }
 
 /**
@@ -23,6 +25,8 @@ export function loop(ctx) {
         if (state.currentOperation === null) {
             checkStartDragging(ctx);
         }
+
+        checkStartEditing(ctx, state);
     }
 
     if (state.currentOperation === 'dragging') {
@@ -86,7 +90,7 @@ function drag(ctx) {
 function hitTest(ctx) {
     ctx.hitTest = true;
     ctx.hitTestResult = null;
-    drawNodes(ctx, nodes);
+    drawNodes(ctx, state, nodes);
     ctx.hitTest = false;
 }
 
@@ -122,7 +126,7 @@ function connectingHitTest(ctx) {
 function draw(ctx) {
     grid(ctx);
     drawConnections(ctx, state);
-    drawNodes(ctx, nodes);
+    drawNodes(ctx, state, nodes);
 }
 
 function debug(ctx) {
@@ -134,7 +138,7 @@ function debug(ctx) {
         for (let x = 0; x < 1000; x++) {
             ctx.mouse.x = x;
             ctx.hitTestResult = null;
-            drawNodes(ctx, nodes);
+            drawNodes(ctx, state, nodes);
             if (ctx.hitTestResult) {
                 ctx.pixel(x, y, ctx.hitTestResult.id === 1 ? 0x20ff0000 : 0x2000ff00);
             }

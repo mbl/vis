@@ -15,11 +15,13 @@ export class Context {
         
         const div = document.getElementById(elementId);
         const canvas = document.createElement('canvas');
+        this.canvas = canvas;
         canvas.width = width;
         canvas.height = height;
 
         div.appendChild(canvas);
         const ctx = canvas.getContext('2d', { alpha: false });
+        ctx.font = '12px Arial';
 
         this.mouse = new Mouse(canvas);
 
@@ -102,7 +104,7 @@ export class Context {
      * @param {string} texture URL of the texture to load
      * @param {number} tint uint32 defining ARGB
      */
-    nineSlicePlane(x, y, w, h, texture, left, top, right, bottom, tint) {
+    nineSlicePlane(x, y, w, h, texture, left, top, right, bottom, tint=null) {
         if (!this.isDrawing()) {
             return;
         }
@@ -131,9 +133,21 @@ export class Context {
         }
     }
 
-    drawText(x, y, text) {
-        this.ctx.fillStyle = 'white';
-        this.ctx.fillText(text, x, y);
+    /**
+     * Draw text into given rectangle.
+     * 
+     * @param {number} x
+     * @param {number} y
+     * @param {number} w
+     * @param {number} h
+     * @param {string} text
+     */
+    drawText(x, y, w, h, text, color='white') {
+        this.ctx.fillStyle = color;
+        this.ctx.textBaseline = 'middle';
+        // TODO: crop text if to wide
+        // this.drawRect(x, y, w, h, 'rgba(0, 255, 0, 0.1)');
+        this.ctx.fillText(text, x, y + h / 2);
     }
 
     drawBezier(x1, y1, x2, y2, x3, y3, x4, y4, color, lineWidth = 1) {

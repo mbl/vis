@@ -5,6 +5,9 @@
 import { ports, addPort, drawPort } from "./ports.js";
 import { getType, types } from "./types.js";
 import { distancePointToRectangle } from "./tools/distance.js"; 
+import { isPortConnected } from "./connections.js";
+import { valueEditor } from "./editor.js";
+import { Context } from "./context.js";
 
 export const nodes = initNodes();  
 
@@ -63,7 +66,7 @@ export function addNode(nodes, type, x, y) {
 
     for(let portId = 0; portId < typeInfo.ports.length; portId++) {
         const pi = typeInfo.ports[portId];
-        addPort(ports, nodeId, portId, pi.output, pi.label, pi.type);
+        addPort(ports, nodeId, portId, pi.output, pi.label, pi.type, pi.defaultValue);
     }
 
     return nodeId;
@@ -109,10 +112,14 @@ export function drawBox(ctx, id, x, y, w, h, color, selected=false, label='') {
     ctx.nineSlicePlane(x, y, w, titleHeight, 'assets/RegularNode_title_highlight.png', 7, 7, 7, 7);
     ctx.nineSlicePlane(x, y, w, titleHeight, 'assets/RegularNode_color_spill.png', 6, 6, 1, 1, color);
 
-    ctx.drawText(x + 20, y + 20, label);
+    ctx.drawText(x + 20, y + 3, w - 20, titleHeight - 3, label);
 }
 
-export function node(ctx, nodeId) {
+/**
+ * @param {Context} ctx
+ * @param {number} nodeId
+ */
+export function node(ctx, state, nodeId) {
     const x = nodes.x[nodeId];
     const y = nodes.y[nodeId];
     const w = nodes.w[nodeId];
@@ -129,24 +136,29 @@ export function node(ctx, nodeId) {
     let portNum = 0;
     for (let portId = 1; portId <= ports.num; portId++) {
         if (ports.nodeId[portId] === nodeId) {
-            const py = y + titleHeight + portNum * portHeight + 7; // + Math.sin(nodeId * Math.PI + ctx.time / 300.0) * 20;
+            const py = y + titleHeight + portNum * portHeight; // + Math.sin(nodeId * Math.PI + ctx.time / 300.0) * 20;
             portNum++;
+            const connected = isPortConnected(portId);
             if (!ports.output[portId]) {
-                drawPort(ctx, nodeId, portId, x + 8, py, 0xffcce00e, false);
-                ctx.drawText(x + 25, py + 9, ports.label[portId]);
+                // Input port
+                drawPort(ctx, portId, x + 8, py + 7, 0xffcce00e, connected);
+                ctx.drawText(x + 25, py, w - 25, portHeight, ports.label[portId]);
             }
             else {
-                drawPort(ctx, nodeId, portId, x + w - 22, py, 0xffcce00e, false);
-                ctx.drawText(x + 8, py + 9, ports.label[portId]);
+                // Output port
+                drawPort(ctx, portId, x + w - 22, py + 7, 0xffcce00e, connected);
+                ctx.drawText(x + 8, py, 40 - 8, portHeight, ports.label[portId]);
+                // Display value if possible, also add editor
+                valueEditor(ctx, state, portId, x + 40, py, w - 40 - 25, portHeight);
             }
         }
     }
 }
 
 // Information about all the nodes being displayed
-export function drawNodes(ctx, nodes) {
+export function drawNodes(ctx, state, nodes) {
     for(let i = 1; i <= nodes.num; i++) {
-        node(ctx, i);
+        node(ctx, state, i);
     }
 }
 
