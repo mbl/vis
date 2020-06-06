@@ -1,53 +1,10 @@
 import { ports } from './ports.js';
+import { Context } from './context.js';
 
-export function initConnections() {
-    const allocated = 1000;
-    
-    return {
-        /** How many nodes are being drawn */
-        num: 0,
-
-        /** How many nodes are allocated in the buffer now */
-        allocated,
-
-        /** port id where connection starts */
-        from: new Uint32Array(allocated),
-
-        /** port id where connection ends */
-        to: new Uint32Array(allocated),
+export function addConnection(from, to) {
+    if (!ports.connectedTo[to]) {
+        ports.connectedTo[to] = from;
     }
-}
-
-/**
- * Allocate new node and return its index.
- */
-export function allocateConnection(connections) {
-    if (connections.num + 1 < connections.allocated) {
-        return ++connections.num;
-    }
-    // TODO reallocate the buffers as needed
-}
-
-export function findConnection(connections, from, to) {
-    for (let i = 1; i <= connections.num; i++) {
-        if (connections.from[i] === from && connections.to[i] === to) {
-            return i;
-        }
-    }
-    return 0;
-}
-
-export function addConnection(connections, from, to) {
-    let i = findConnection(connections, from, to);
-
-    if (!i) {
-        i = allocateConnection(connections);
-
-        connections.from[i] = from;
-        connections.to[i] = to;
-    }
-
-    return i;
 }
 
 /**
@@ -56,8 +13,10 @@ export function addConnection(connections, from, to) {
  * @param {Context} ctx 
  */
 export function drawConnections(ctx, state) {
-    for (let i = 1; i <= connections.num; i++) {
-        drawConnection(ctx, connections.from[i], connections.to[i]);
+    for (let i = 1; i <= ports.num; i++) {
+        if (ports.connectedTo[i]) {
+            drawConnection(ctx, ports.connectedTo[i], i);
+        }
     }
     if (state.connecting) {
         if (state.connecting.end === -1) {
@@ -117,10 +76,10 @@ export function connect(ctx, state) {
     if (ctx.mouse.mouseUp) {
         if (state.connecting.end !== -1) {
             if (state.connecting.startIsOutput) {
-                addConnection(connections, state.connecting.start, state.connecting.end);
+                addConnection(state.connecting.start, state.connecting.end);
             }
             else {
-                addConnection(connections, state.connecting.end, state.connecting.start);
+                addConnection(state.connecting.end, state.connecting.start);
             }
         }
 
@@ -131,18 +90,11 @@ export function connect(ctx, state) {
 
 /**
  * @param {number} portId 
- * @return True if port is connected to anything.
+ * @return ID of the port this port is connected to or 0 if not connected.
  */
-export function isPortConnected(portId) {
-    for (let i = 1; i <= connections.num; i++) {
-        if (connections.from[i] === portId || connections.to[i] === portId) {
-            return true;
-        }
-    }
-    return false;
+export function connectedTo(portId) {
+    return ports.connectedTo[portId];
 }
-
-export const connections = initConnections();
 
 /** 
  * Draws a single connection between two ports.

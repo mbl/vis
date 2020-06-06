@@ -2,8 +2,9 @@ import { grid } from "./grid.js";
 import { drawNodes, nodes } from "./nodes.js"
 import { Context } from "./context.js"
 import { ports } from "./ports.js";
-import { addConnection, connections, checkStartConnecting, connect, portsCompatible, drawConnections } from "./connections.js";
+import { checkStartConnecting, connect, portsCompatible, drawConnections } from "./connections.js";
 import { checkStartEditing } from "./editor.js";
+import { run } from "./interpreter.js";
 
 const state = {
     currentOperation: null,
@@ -36,6 +37,8 @@ export function loop(ctx) {
         connectingHitTest(ctx);
         connect(ctx, state);
     }
+
+    run();
 
     layout(ctx);
 

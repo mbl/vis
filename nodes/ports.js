@@ -14,6 +14,7 @@ export function initPorts() {
         x: new Float32Array(allocated),
         y: new Float32Array(allocated),
         output: new Int8Array(allocated),
+        connectedTo: new Int32Array(allocated),
         label: new Array(allocated),
         type: new Array(allocated),
         value: new Array(allocated),

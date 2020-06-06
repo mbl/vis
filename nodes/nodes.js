@@ -5,7 +5,7 @@
 import { ports, addPort, drawPort } from "./ports.js";
 import { getType, types } from "./types.js";
 import { distancePointToRectangle } from "./tools/distance.js"; 
-import { isPortConnected } from "./connections.js";
+import { connectedTo } from "./connections.js";
 import { valueEditor } from "./editor.js";
 import { Context } from "./context.js";
 
@@ -60,9 +60,12 @@ export function addNode(nodes, type, x, y) {
     nodes.x[nodeId] = x;
     nodes.y[nodeId] = y;
     nodes.w[nodeId] = typeInfo.w;
-    nodes.h[nodeId] = titleHeight + typeInfo.ports.length * portHeight;
+    nodes.h[nodeId] = titleHeight + 
+        typeInfo.ports.length * portHeight +
+        (typeInfo.preview ? typeInfo.preview.height : 0);
     nodes.color[nodeId] = typeInfo.color;
     nodes.title[nodeId] = typeInfo.title;
+    nodes.type[nodeId] = typeId;
 
     for(let portId = 0; portId < typeInfo.ports.length; portId++) {
         const pi = typeInfo.ports[portId];
@@ -138,7 +141,7 @@ export function node(ctx, state, nodeId) {
         if (ports.nodeId[portId] === nodeId) {
             const py = y + titleHeight + portNum * portHeight; // + Math.sin(nodeId * Math.PI + ctx.time / 300.0) * 20;
             portNum++;
-            const connected = isPortConnected(portId);
+            const connected = connectedTo(portId);
             if (!ports.output[portId]) {
                 // Input port
                 drawPort(ctx, portId, x + 8, py + 7, 0xffcce00e, connected);
@@ -152,6 +155,13 @@ export function node(ctx, state, nodeId) {
                 valueEditor(ctx, state, portId, x + 40, py, w - 40 - 25, portHeight);
             }
         }
+    }
+
+    const typeId = nodes.type[nodeId];
+    const typeInfo = types[typeId];
+    if (typeInfo.preview) {
+        const pH = typeInfo.preview.height;
+        typeInfo.preview.draw(nodeId, ctx, x + 3, y + h - pH + 3, w - 6, pH - 6);
     }
 }
 

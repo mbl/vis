@@ -142,7 +142,8 @@ export class Context {
      * @param {number} h
      * @param {string} text
      */
-    drawText(x, y, w, h, text, color='white') {
+    drawText(x, y, w, h, text, color='white', fontSize=12) {
+        this.ctx.font = `${fontSize}px Arial`;
         this.ctx.fillStyle = color;
         this.ctx.textBaseline = 'middle';
         // TODO: crop text if to wide
