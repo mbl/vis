@@ -123,6 +123,9 @@ export function drawBox(ctx, id, x, y, w, h, color, selected=false, label='') {
  * @param {number} nodeId
  */
 export function node(ctx, state, nodeId) {
+    const typeId = nodes.type[nodeId];
+    const typeInfo = types[typeId];
+
     const x = nodes.x[nodeId];
     const y = nodes.y[nodeId];
     const w = nodes.w[nodeId];
@@ -152,13 +155,14 @@ export function node(ctx, state, nodeId) {
                 drawPort(ctx, portId, x + w - 22, py + 7, 0xffcce00e, connected);
                 ctx.drawText(x + 8, py, 40 - 8, portHeight, ports.label[portId]);
                 // Display value if possible, also add editor
-                valueEditor(ctx, state, portId, x + 40, py, w - 40 - 25, portHeight);
+                const portTypeInfo = typeInfo.ports[ports.order[portId]];
+                if (portTypeInfo.editor) {
+                    valueEditor(ctx, state, portId, x + 40, py, w - 40 - 25, portHeight, portTypeInfo.type);
+                }
             }
         }
     }
 
-    const typeId = nodes.type[nodeId];
-    const typeInfo = types[typeId];
     if (typeInfo.preview) {
         const pH = typeInfo.preview.height;
         typeInfo.preview.draw(nodeId, ctx, x + 3, y + h - pH + 3, w - 6, pH - 6);

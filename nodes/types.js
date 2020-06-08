@@ -7,13 +7,13 @@ export const types = [
         title: 'Number',
         color: 0xffcce00e,
         w: 100,
-        evaluate: () => {},
         ports: [
             { 
                 output: 1,
                 label: 'value',
                 type: 'float32',
                 defaultValue: 0,
+                editor: 1,
             }
         ]
     },
@@ -23,8 +23,6 @@ export const types = [
         title: 'Display',
         w: 120,
         color: 0xffe0cc0e,
-        evaluate: () => {
-        },
         preview: {
             height: 100,
             draw: (nodeId, ctx, x, y, w, h) => {
@@ -33,6 +31,9 @@ export const types = [
                 let number = 'NaN';
                 if (sourcePortId) {
                     number = ports.value[sourcePortId];
+                    if (number === undefined) {
+                        number = '?';
+                    }
                 }
                 ctx.drawText(x, y, w, h, number.toString(), 'red', 48);
             }
@@ -41,6 +42,34 @@ export const types = [
             { 
                 output: 0,
                 label: 'value',
+                type: 'float32',
+                defaultValue: 0,
+            }
+        ]
+    },
+
+    { 
+        type: 'plus',
+        title: '+',
+        w: 55,
+        color: 0xffcc4020,
+        evaluate: (a, b) => [a + b],
+        ports: [
+            { 
+                output: 0,
+                label: 'a',
+                type: 'float32',
+                defaultValue: 0,
+            },
+            { 
+                output: 0,
+                label: 'b',
+                type: 'float32',
+                defaultValue: 0,
+            },
+            { 
+                output: 1,
+                label: 'a+b',
                 type: 'float32',
             }
         ]

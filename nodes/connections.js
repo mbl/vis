@@ -43,11 +43,21 @@ export function checkStartConnecting(ctx, state) {
         state.currentOperation = 'connecting';
         const portId = ctx.hitTestResult.id;
 
-        state.connecting = {
-            start: portId,
-            end: -1,
-            startIsOutput: ports.output[portId],
-        };
+        if (ports.connectedTo[portId]) {
+            state.connecting = {
+                start: ports.connectedTo[portId],
+                end: portId,
+                startIsOutput: 1,
+            };
+            ports.connectedTo[portId] = 0;
+        }
+        else {
+            state.connecting = {
+                start: portId,
+                end: -1,
+                startIsOutput: ports.output[portId],
+            };
+        }
     }
 }
 

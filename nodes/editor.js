@@ -11,8 +11,9 @@ import { CanvasInput } from "./canvasInput/CanvasInput.js";
  * @param {number} y 
  * @param {number} w 
  * @param {number} h 
+ * @param {string} type What type are we editing
  */
-export function valueEditor(ctx, state, portId, x, y, w, h) {
+export function valueEditor(ctx, state, portId, x, y, w, h, type) {
     if(ctx.hitTestRect(x, y, w, h)) {
         ctx.recordHitTest('editor', portId, 
             distancePointToRectangle(ctx.mouse, x, y, w, h),
@@ -57,7 +58,13 @@ export function valueEditor(ctx, state, portId, x, y, w, h) {
         }
         if (ctx.isDrawing()) {
             state.editing.canvasInput.render();
-            ports.value[state.editing.portId] = state.editing.canvasInput.value();
+            const stringValue = state.editing.canvasInput.value();
+            if (type === 'float32') {
+                ports.value[state.editing.portId] = Number.parseFloat(stringValue);
+            }
+            else {
+                ports.value[state.editing.portId] = stringValue;
+            }
         }
     }
     else {

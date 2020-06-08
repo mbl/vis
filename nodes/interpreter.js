@@ -1,7 +1,11 @@
 import { nodes, getNodePorts } from "./nodes.js";
 import { ports } from "./ports.js";
+import { types } from "./types.js";
 import { connectedTo } from "./connections.js";
 
+/**
+ * Run the interpreter until all possible nodes are evaluated.
+ */
 export function run() {
     const evaluated = new Array(nodes.num);
     let numEvaluated = 0;
@@ -16,6 +20,8 @@ export function run() {
             }
 
             const portIds = getNodePorts(nodeId);
+            const typeInfo = types[nodes.type[nodeId]];
+            const input = [];
             let readyToEvaluate = true;
             for (let p=0; p<portIds.length; p++) {
                 const portId = portIds[p];
@@ -28,16 +34,33 @@ export function run() {
                             readyToEvaluate = false;
                             break;
                         }
+                        // Store value to input array
+                        input[ports.order[portId]] = ports.value[outputPortId];
                     } 
                     else {
-                        readyToEvaluate = false;
-                        break;
+                        if (typeInfo.ports[ports.order[portId]].defaultValue) {
+                            input[ports.order[portId]] = typeInfo.ports[ports.order[portId]].defaultValue;
+                        }
+                        else {
+                            readyToEvaluate = false;
+                            break;
+                        }
                     }
                 }
             }
 
             if (readyToEvaluate) {
-                // TODO: Evaluate
+                if (typeInfo.evaluate) {
+                    const result = typeInfo.evaluate.apply(null, input);
+                    let outputNum = 0;
+                    for (let i=1; i<=ports.num; i++) {
+                        if (ports.nodeId[i] === nodeId && ports.output[i]) {
+                            ports.value[i] = result[outputNum];
+                            outputNum++;
+                        }
+                    }
+                }
+
                 evaluated[nodeId] = true;
                 numEvaluated++;
             }
