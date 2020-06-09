@@ -14,7 +14,10 @@ export function initPorts() {
         x: new Float32Array(allocated),
         y: new Float32Array(allocated),
         output: new Int8Array(allocated),
+        // If input port, ID of a port this port is connected to
         connectedTo: new Int32Array(allocated),
+        // If output port, number of ports that are connected to this one
+        numConnections: new Int32Array(allocated),
         label: new Array(allocated),
         type: new Array(allocated),
         value: new Array(allocated),
@@ -43,6 +46,8 @@ export function addPort(ports, nodeId, order, output, label, type, value) {
     ports.label[i] = label;
     ports.type[i] = type;
     ports.value[i] = value;
+    ports.connectedTo[i] = 0;
+    ports.numConnections[i] = 0;
 
     return i;
 }
@@ -50,7 +55,12 @@ export function addPort(ports, nodeId, order, output, label, type, value) {
 export const ports = initPorts();
 
 /**
- * @param {Context} ctx 
+ * @param {Context} ctx
+ * @param {number} portId
+ * @param {number} x Left
+ * @param {number} y Top
+ * @param {number} color How to color the port
+ * @param {boolean} connected If true, display port as filled
  */
 export function drawPort(ctx, portId, x, y, color, connected) {
     ctx.positionPort(portId, x + 7.5, y + 5.5);

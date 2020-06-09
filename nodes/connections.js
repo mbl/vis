@@ -4,6 +4,14 @@ import { Context } from './context.js';
 export function addConnection(from, to) {
     if (!ports.connectedTo[to]) {
         ports.connectedTo[to] = from;
+        ports.numConnections[from]++;
+    }
+}
+
+export function removeConnection(from, to) {
+    if (ports.connectedTo[to] === from) {
+        ports.connectedTo[to] = 0;
+        ports.numConnections[from]--;
     }
 }
 
@@ -49,7 +57,7 @@ export function checkStartConnecting(ctx, state) {
                 end: portId,
                 startIsOutput: 1,
             };
-            ports.connectedTo[portId] = 0;
+            removeConnection(ports.connectedTo[portId], portId);
         }
         else {
             state.connecting = {

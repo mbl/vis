@@ -144,15 +144,14 @@ export function node(ctx, state, nodeId) {
         if (ports.nodeId[portId] === nodeId) {
             const py = y + titleHeight + portNum * portHeight; // + Math.sin(nodeId * Math.PI + ctx.time / 300.0) * 20;
             portNum++;
-            const connected = connectedTo(portId);
-            if (!ports.output[portId]) {
+           if (!ports.output[portId]) {
                 // Input port
-                drawPort(ctx, portId, x + 8, py + 7, 0xffcce00e, connected);
+                drawPort(ctx, portId, x + 8, py + 7, 0xffcce00e, !!connectedTo(portId));
                 ctx.drawText(x + 25, py, w - 25, portHeight, ports.label[portId]);
             }
             else {
                 // Output port
-                drawPort(ctx, portId, x + w - 22, py + 7, 0xffcce00e, connected);
+                drawPort(ctx, portId, x + w - 22, py + 7, 0xffcce00e, !!ports.numConnections[portId]);
                 ctx.drawText(x + 8, py, 40 - 8, portHeight, ports.label[portId]);
                 // Display value if possible, also add editor
                 const portTypeInfo = typeInfo.ports[ports.order[portId]];
