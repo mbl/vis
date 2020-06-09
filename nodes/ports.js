@@ -63,7 +63,9 @@ export const ports = initPorts();
  * @param {boolean} connected If true, display port as filled
  */
 export function drawPort(ctx, portId, x, y, color, connected) {
-    ctx.positionPort(portId, x + 7.5, y + 5.5);
+    // Layout ----------------------------
+    ports.x[portId] = x + 7.5;
+    ports.y[portId] = y + 5.5;
 
     const w = 15;
     const h = 15;

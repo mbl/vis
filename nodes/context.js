@@ -31,15 +31,10 @@ export class Context {
         this.textureCache = new TextureCache();
         this.assetPrefix = assetPrefix;
         
-        // When true, context is in a hit-test only mode
-        // does not draw, just remembers what the hit test was
-        this.hitTest = false;
-
-        // When true, context is capturing layout information
-        this.layout = false;
-
-        // As hit testing progresses, the result is set to here
+        // Hit test result from previous frame
         this.hitTestResult = null;
+        // As hit testing progresses, the result is set to here
+        this.partialHitTestResult = null;
         this.hitTestNoiseThreshold = 5; // How precisely user positions mouse usually
         this.hitTestMaxDistance = 5;
 
@@ -47,19 +42,23 @@ export class Context {
         this.time = Date.now();
     }
 
-    isDrawing() {
-        return !this.hitTest && !this.layout;
+    // Context management ---
+    newFrame() {
+        this.hitTestResult = this.partialHitTestResult;
+        this.partialHitTestResult = null;
     }
 
-    pixel(x, y, color) {
-        if (!this.isDrawing()) {
-            return;
-        }
-        this.ctx.fillStyle = colorARGBToCSS(color);
-        this.ctx.fillRect(x, y, 1, 1);
+    endFrame() {
+        this.mouse.mouseDown = false;
+        this.mouse.mouseUp = false;
     }
 
     // Drawing commands ---
+
+    pixel(x, y, color) {
+        this.ctx.fillStyle = colorARGBToCSS(color);
+        this.ctx.fillRect(x, y, 1, 1);
+    }
 
     /**
      * 
@@ -71,9 +70,6 @@ export class Context {
      * @param {*} lineWidth 
      */
     drawLine(x1, y1, x2, y2, color, lineWidth=1) {
-        if (!this.isDrawing()) {
-            return;
-        }
         this.ctx.lineWidth = lineWidth;
         this.ctx.strokeStyle = color;
         this.ctx.beginPath();
@@ -83,17 +79,11 @@ export class Context {
     }
 
     drawRect(x, y, w, h, fill) {
-        if (!this.isDrawing()) {
-            return;
-        }
         this.ctx.fillStyle = fill;
         this.ctx.fillRect(x, y, w, h);
     }
 
     sprite(x, y, texture, tint = null) {
-        if (!this.isDrawing()) {
-            return;
-        }
         var img = this.textureCache.getImage(this, `${this.assetPrefix}${texture}`, tint);
         if (img) {
             this.ctx.drawImage(img, x, y);
@@ -105,9 +95,6 @@ export class Context {
      * @param {number} tint uint32 defining ARGB
      */
     nineSlicePlane(x, y, w, h, texture, left, top, right, bottom, tint=null) {
-        if (!this.isDrawing()) {
-            return;
-        }
         var img = this.textureCache.getImage(this, `${this.assetPrefix}${texture}`, tint);
         if (img) {
             const iw = img.width;
@@ -152,9 +139,6 @@ export class Context {
     }
 
     drawBezier(x1, y1, x2, y2, x3, y3, x4, y4, color, lineWidth = 1) {
-        if (!this.isDrawing()) {
-            return;
-        }
         this.ctx.lineWidth = lineWidth;
         this.ctx.strokeStyle = color;
         
@@ -212,21 +196,13 @@ export class Context {
     }
 
     recordHitTest(type, id, distance, relDistance) {
-        if (this.hitTest) {
-            const hitTestData = {
-                type, id, distance, relDistance
-            };
+        const hitTestData = {
+            type, id, distance, relDistance
+        };
 
-            if (this.hitTestResult === null || 
-                this.betterHitTest(hitTestData, this.hitTestResult)) {
-                this.hitTestResult = hitTestData;
-            }
+        if (this.partialHitTestResult === null || 
+            this.betterHitTest(hitTestData, this.partialHitTestResult)) {
+            this.partialHitTestResult = hitTestData;
         }
-    }
-
-    // Layout ----------------------------
-    positionPort(portId, x, y) {
-        ports.x[portId] = x;
-        ports.y[portId] = y;
     }
 }

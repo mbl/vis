@@ -3,6 +3,9 @@ import { addNode, nodes, getNodePorts } from './nodes.js';
 import { loop } from './loop.js';
 import { addConnection } from './connections.js';
 
+// Serialization
+// Add/remove node
+
 // Define the plot
 const number1 = addNode(nodes, 'number', 10, 10);
 const number2 = addNode(nodes, 'number', 10, 100);

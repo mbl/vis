@@ -18,9 +18,9 @@ const state = {
  * @param {Context} ctx Input context
  */
 export function loop(ctx) {
-    if (!state.currentOperation) {
-        hitTest(ctx);
+    ctx.newFrame();
 
+    if (!state.currentOperation) {
         checkStartConnecting(ctx, state);
 
         if (state.currentOperation === null) {
@@ -40,22 +40,12 @@ export function loop(ctx) {
 
     run();
 
-    layout(ctx);
-
     draw(ctx);
+
+    ctx.endFrame();
 
     // debug(ctx);
-
-    ctx.mouse.mouseDown = false;
-    ctx.mouse.mouseUp = false;
-
     ctx.requestRedraw();
-}
-
-function layout(ctx) {
-    ctx.layout = true;
-    draw(ctx);
-    ctx.layout = false;
 }
 
 function checkStartDragging(ctx) {
@@ -90,16 +80,7 @@ function drag(ctx) {
     }
 }
 
-function hitTest(ctx) {
-    ctx.hitTest = true;
-    ctx.hitTestResult = null;
-    drawNodes(ctx, state, nodes);
-    ctx.hitTest = false;
-}
-
 function connectingHitTest(ctx) {
-    hitTest(ctx);
-
     if (ctx.hitTestResult && ctx.hitTestResult.type !== 'port') {
         let compatiblePortId = 0;
         if (ctx.hitTestResult.type === 'node') {
