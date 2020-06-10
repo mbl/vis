@@ -6,7 +6,7 @@ import { connectedTo } from "./connections.js";
 /**
  * Run the interpreter until all possible nodes are evaluated.
  */
-export function run() {
+export function run(ctx) {
     const evaluated = new Array(nodes.num);
     let numEvaluated = 0;
     let prevNumEvaluated = -1;
@@ -29,8 +29,8 @@ export function run() {
                     const outputPortId = connectedTo(portId);
                     if (outputPortId) {
                         // The node that provides the output
-                        const outputNodeId = ports.nodeId[outputPortId]
-                        if (!evaluated[outputPortId]) {
+                        const outputNodeId = ports.nodeId[outputPortId];
+                        if (!evaluated[outputNodeId]) {
                             readyToEvaluate = false;
                             break;
                         }
@@ -63,6 +63,7 @@ export function run() {
 
                 evaluated[nodeId] = true;
                 numEvaluated++;
+                // ctx.drawText(nodes.x[nodeId]-10, nodes.y[nodeId]-10, 10, 10, numEvaluated.toString(), 'red', 15);
             }
         }
     }

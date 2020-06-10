@@ -5,6 +5,7 @@ import { ports } from "./ports.js";
 import { checkStartConnecting, connect, portsCompatible, drawConnections } from "./connections.js";
 import { checkStartEditing } from "./editor.js";
 import { run } from "./interpreter.js";
+import { menu, menuState } from "./menu.js";
 
 const state = {
     currentOperation: null,
@@ -26,8 +27,6 @@ export function loop(ctx) {
         if (state.currentOperation === null) {
             checkStartDragging(ctx);
         }
-
-        checkStartEditing(ctx, state);
     }
 
     if (state.currentOperation === 'dragging') {
@@ -37,10 +36,21 @@ export function loop(ctx) {
         connectingHitTest(ctx);
         connect(ctx, state);
     }
+    else {
+        if (!menuState.displayed && ctx.hitTestResult === null && ctx.mouse.mouseDown) {
+            menuState.displayed = true;
+            menuState.x = ctx.mouse.x;
+            menuState.y = ctx.mouse.y;
+        }
+    }
 
-    run();
+    grid(ctx);
+    
+    run(ctx);
 
-    draw(ctx);
+    drawConnections(ctx, state);
+    drawNodes(ctx, state, nodes);
+    menu(ctx);
 
     ctx.endFrame();
 
@@ -105,12 +115,6 @@ function connectingHitTest(ctx) {
             ctx.hitTestResult = null;
         }
     }
-}
-
-function draw(ctx) {
-    grid(ctx);
-    drawConnections(ctx, state);
-    drawNodes(ctx, state, nodes);
 }
 
 function debug(ctx) {

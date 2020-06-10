@@ -2,11 +2,10 @@
  * Describes all the nodes in the scene
  */
 
-import { ports, addPort, drawPort } from "./ports.js";
+import { ports, addPort, drawPort, portValue } from "./ports.js";
 import { getType, types } from "./types.js";
 import { distancePointToRectangle } from "./tools/distance.js"; 
 import { connectedTo } from "./connections.js";
-import { valueEditor } from "./editor.js";
 import { Context } from "./context.js";
 
 export const nodes = initNodes();  
@@ -156,7 +155,7 @@ export function node(ctx, state, nodeId) {
                 // Display value if possible, also add editor
                 const portTypeInfo = typeInfo.ports[ports.order[portId]];
                 if (portTypeInfo.editor) {
-                    valueEditor(ctx, state, portId, x + 40, py, w - 40 - 25, portHeight, portTypeInfo.type);
+                    ctx.inputText(portId, portValue, x + 40, py, w - 40 - 25, portHeight, portTypeInfo.type);
                 }
             }
         }

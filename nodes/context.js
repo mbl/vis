@@ -2,6 +2,7 @@ import { TextureCache } from './textureCache.js';
 import { colorARGBToCSS } from './tools/colors.js';
 import { ports } from './ports.js';
 import { Mouse } from './mouse.js';
+import { valueEditor, checkStartEditing } from './editor.js';
 
 /**
  * Drawing / hitTesting / other querying context
@@ -33,6 +34,7 @@ export class Context {
         
         // Hit test result from previous frame
         this.hitTestResult = null;
+
         // As hit testing progresses, the result is set to here
         this.partialHitTestResult = null;
         this.hitTestNoiseThreshold = 5; // How precisely user positions mouse usually
@@ -40,12 +42,16 @@ export class Context {
 
         // Other data
         this.time = Date.now();
+
+        this.editorState = {};
     }
 
     // Context management ---
     newFrame() {
         this.hitTestResult = this.partialHitTestResult;
         this.partialHitTestResult = null;
+
+        checkStartEditing(this, this.editorState);
     }
 
     endFrame() {
@@ -146,6 +152,20 @@ export class Context {
         this.ctx.moveTo(x1, y1);
         this.ctx.bezierCurveTo(x2, y2, x3, y3, x4, y4);
         this.ctx.stroke();
+    }
+
+    /**
+     * Draw editor for a value of a given type
+     * @param {number} id 
+     * @param {(number, any) => any} value When called with one parameter, get value for id, otherwise set value for id to given value
+     * @param {number} x 
+     * @param {number} y 
+     * @param {number} w 
+     * @param {number} h 
+     * @param {string} type 
+     */
+    inputText(id, value, x, y, w, h, type) {
+        valueEditor(this, this.editorState, id, value, x, y, w, h, type);
     }
 
     /**

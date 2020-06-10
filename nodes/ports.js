@@ -89,4 +89,18 @@ export function drawPort(ctx, portId, x, y, color, connected) {
     else {
         ctx.sprite(x, y, 'assets/Pin_disconnected_VarA.png', actualColor);
     }
+    // ctx.drawText(x, y, 10, 10, portId.toString(), 'white', 10);
+}
+
+/**
+ * Get or set port value.
+ * 
+ * @param {number} portId
+ * @param {any?} value
+ */
+export function portValue(portId, value) {
+    if (value !== undefined) {
+        ports.value[portId] = value;
+    }
+    return ports.value[portId];
 }

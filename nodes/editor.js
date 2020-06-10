@@ -1,37 +1,37 @@
 import { Context } from "./context.js";
-import { ports } from "./ports.js";
 import { distancePointToRectangle } from "./tools/distance.js";
 import { CanvasInput } from "./canvasInput/CanvasInput.js";
 
 /**
  * 
  * @param {Context} ctx 
- * @param {number} portId 
+ * @param {any} state To store information about current editing state
+ * @param {function} value A function, when called with empty parameter, get value, when parameter is passed in, set value.
+ * @param {number} id Id of the whatever object being edited
  * @param {number} x 
  * @param {number} y 
  * @param {number} w 
  * @param {number} h 
  * @param {string} type What type are we editing
  */
-export function valueEditor(ctx, state, portId, x, y, w, h, type) {
+export function valueEditor(ctx, state, id, value, x, y, w, h, type) {
     if(ctx.hitTestRect(x, y, w, h)) {
-        ctx.recordHitTest('editor', portId, 
+        ctx.recordHitTest('editor', id, 
             distancePointToRectangle(ctx.mouse, x, y, w, h),
             w * h
         );
     }
     
-    const value = ports.value[portId];
-    const valueString = value.toString();
+    const valueString = value(id).toString();
 
-    if (ctx.hitTestResult && ctx.hitTestResult.type === 'editor' && ctx.hitTestResult.id === portId) {
+    if (ctx.hitTestResult && ctx.hitTestResult.type === 'editor' && ctx.hitTestResult.id === id) {
         ctx.drawRect(x, y, w, h, 'rgba(255, 255, 255, 0.2)');
     }
     else {
         ctx.drawRect(x, y, w, h, 'rgba(255, 255, 255, 0.1)');
     }
 
-    if (state.editing && state.editing.portId === portId) {
+    if (state.editing && state.editing.portId === id) {
         if (!state.editing.canvasInput) {
             const canvasInput = new CanvasInput(
                 {
@@ -56,15 +56,13 @@ export function valueEditor(ctx, state, portId, x, y, w, h, type) {
             canvasInput.selectText();
             state.editing.canvasInput = canvasInput;
         }
-        if (ctx.isDrawing()) {
-            state.editing.canvasInput.render();
-            const stringValue = state.editing.canvasInput.value();
-            if (type === 'float32') {
-                ports.value[state.editing.portId] = Number.parseFloat(stringValue);
-            }
-            else {
-                ports.value[state.editing.portId] = stringValue;
-            }
+        state.editing.canvasInput.render();
+        const stringValue = state.editing.canvasInput.value();
+        if (type === 'float32') {
+            value(id, Number.parseFloat(stringValue));
+        }
+        else {
+            value(id, stringValue);
         }
     }
     else {
