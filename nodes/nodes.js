@@ -5,7 +5,7 @@
 import { ports, addPort, drawPort, portValue } from "./ports.js";
 import { getType, types } from "./types.js";
 import { distancePointToRectangle } from "./tools/distance.js"; 
-import { connectedTo } from "./connections.js";
+import { connectedTo, removeConnections } from "./connections.js";
 import { Context } from "./context.js";
 
 export const nodes = initNodes();  
@@ -16,8 +16,17 @@ export function initNodes() {
     return {
         /** How many nodes are being drawn */
         num: 0,
+
+        /** How many nodes are deleted */
+        numDeleted: 0,
+
         /** How many nodes are allocated in the buffer now */
         allocated,
+
+        /**
+         * When nonzero, this node is deleted.
+         */
+        deleted: new Int8Array(allocated),
 
         // Type of the node - registered in an enum of types
         type: new Int32Array(allocated),
@@ -40,6 +49,16 @@ export function initNodes() {
  * Allocate new node and return its index.
  */
 export function allocateNode(nodes) {
+    if (nodes.numDeleted > 0) {
+        for(let i=1; i<=nodes.num; i++) {
+            if (nodes.deleted[i]) {
+                nodes.deleted[i] = 0;
+                nodes.numDeleted--;
+                return i;
+            }
+        }
+    }
+
     if (nodes.num + 1 < nodes.allocated) {
         return ++nodes.num;
     }
@@ -74,6 +93,11 @@ export function addNode(nodes, type, x, y) {
     return nodeId;
 }
 
+export function deleteNode(nodes, nodeId) {
+    nodes.deleted[nodeId] = 1;
+    removeConnections(nodeId);
+}
+
 export const titleHeight = 30;
 export const portHeight = 25;
 
@@ -98,12 +122,7 @@ export function drawBox(ctx, id, x, y, w, h, color, selected=false, label='') {
         );
     }
 
-    if (selected || 
-        (ctx.hitTestResult && 
-            ctx.hitTestResult.type === 'node' && 
-            ctx.hitTestResult.id === id
-            )
-        ) {
+    if (selected || hot(ctx, id)) {
         ctx.nineSlicePlane(x - 13, y - 13, w + 26, h + 26, 'assets/RegularNode_shadow_selected.png', 21, 21, 21, 21);
     }
     else {
@@ -118,10 +137,30 @@ export function drawBox(ctx, id, x, y, w, h, color, selected=false, label='') {
 }
 
 /**
+ * Was this node hittested in the previous frame.
+ * @param {Context} ctx 
+ * @param {number} nodeId 
+ */
+function hot(ctx, nodeId) {
+    return (ctx.hitTestResult &&
+        ctx.hitTestResult.type === 'node' &&
+        ctx.hitTestResult.id === nodeId);
+}
+
+/**
  * @param {Context} ctx
  * @param {number} nodeId
  */
 export function node(ctx, state, nodeId) {
+    if (nodes.deleted[nodeId]) {
+        return;
+    }
+
+    if (hot(ctx, nodeId) && ctx.keyboard.keyCode === 46) {
+        deleteNode(nodes, nodeId);
+        return;
+    }
+
     const typeId = nodes.type[nodeId];
     const typeInfo = types[typeId];
 
@@ -184,4 +223,11 @@ export function getNodePorts(nodeId) {
     }
 
     return result;
+}
+
+export function removePorts(nodeId) {
+    const nodePorts = getNodePorts(nodeId);
+    for (let i=0; i<nodePorts.length; i++) {
+        removePort(ports, i);
+    }
 }

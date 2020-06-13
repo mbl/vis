@@ -15,6 +15,17 @@ export function removeConnection(from, to) {
     }
 }
 
+export function removeConnections(nodeId) {
+    for (let i = 1; i <= ports.num; i++) {
+        if (ports.connectedTo[i] === nodeId) {
+            removeConnection(ports.connectedTo[i], i);
+        }
+        else if (ports.nodeId[i] === nodeId && ports.connectedTo[i]) {
+            removeConnection(ports.connectedTo[i], i);
+        }
+    }
+}
+
 /**
  * Draw all existing connections including the one being currently created.
  * 

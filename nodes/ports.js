@@ -5,9 +5,10 @@ export function initPorts() {
     const allocated = 1000;
     return {
         num: 0,
+        numDeleted: 0,
         allocated,
 
-        // ID of the node the port belongs to
+        // ID of the node the port belongs to. If 0, this port is deleted.
         nodeId: new Int32Array(allocated),
         // 0-based order of the port within the node
         order: new Int32Array(allocated),
@@ -28,6 +29,15 @@ export function initPorts() {
  * Allocate new port and return its index.
  */
 export function allocatePort(ports) {
+    if (ports.numDeleted > 0) {
+        for (let i=1; i<=ports.num; i++) {
+            if (ports.nodeId[i] === 0) {
+                ports.numDeleted--;
+                return i;
+            }
+        }
+    }
+
     if (ports.num + 1 < ports.allocated) {
         return ++ports.num;
     }
@@ -50,6 +60,11 @@ export function addPort(ports, nodeId, order, output, label, type, value) {
     ports.numConnections[i] = 0;
 
     return i;
+}
+
+export function removePort(ports, portId) {
+    ports.nodeId[portId] = 0;
+    ports.numDeleted++;
 }
 
 export const ports = initPorts();

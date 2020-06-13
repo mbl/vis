@@ -5,6 +5,9 @@
  * for a particular frame.
  */
 export class Mouse {
+    /**
+     * @param {HTMLCanvasElement} canvas
+     */
     constructor(canvas) {
         this.canvas = canvas;
         this.x = 0;

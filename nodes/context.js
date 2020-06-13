@@ -3,6 +3,7 @@ import { colorARGBToCSS } from './tools/colors.js';
 import { ports } from './ports.js';
 import { Mouse } from './mouse.js';
 import { valueEditor, checkStartEditing } from './editor.js';
+import { Keyboard } from './keyboard.js';
 
 /**
  * Drawing / hitTesting / other querying context
@@ -25,6 +26,7 @@ export class Context {
         ctx.font = '12px Arial';
 
         this.mouse = new Mouse(canvas);
+        this.keyboard = new Keyboard(canvas);
 
         this.ctx = ctx;
         this.draw = draw;
@@ -50,13 +52,13 @@ export class Context {
     newFrame() {
         this.hitTestResult = this.partialHitTestResult;
         this.partialHitTestResult = null;
-
         checkStartEditing(this, this.editorState);
     }
 
     endFrame() {
         this.mouse.mouseDown = false;
         this.mouse.mouseUp = false;
+        this.keyboard.endFrame();
     }
 
     // Drawing commands ---
