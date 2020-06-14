@@ -1,5 +1,7 @@
 import { distancePointToRectangle } from './tools/distance.js';
 import { Context } from "./context.js";
+import { getNodePorts, nodes } from './nodes.js';
+import { types } from './types.js';
 
 export function initPorts() {
     const allocated = 1000;
@@ -118,4 +120,17 @@ export function portValue(portId, value) {
         ports.value[portId] = value;
     }
     return ports.value[portId];
+}
+
+export function findPortByLabel(nodeId, label) {
+    const typeInfo = types[nodes.type[nodeId]];
+
+    const portIds = getNodePorts(nodeId);
+    for (let p = 0; p < portIds.length; p++) {
+        const portId = portIds[p];
+        if(typeInfo.ports[ports.order[portId]].label === label) {
+            return portId;
+        }
+    }
+    return 0;
 }

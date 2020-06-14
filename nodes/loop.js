@@ -6,6 +6,7 @@ import { checkStartConnecting, connect, portsCompatible, drawConnections } from 
 import { checkStartEditing } from "./editor.js";
 import { run } from "./interpreter.js";
 import { menu, menuState } from "./menu.js";
+import { autosave } from "./serialization.js";
 
 const state = {
     currentOperation: null,
@@ -51,6 +52,8 @@ export function loop(ctx) {
     drawConnections(ctx, state);
     drawNodes(ctx, state, nodes);
     menu(ctx);
+
+    autosave();
 
     ctx.endFrame();
 
