@@ -115,13 +115,6 @@ export const portHeight = 25;
  * @param {boolean} selected
  */
 export function drawBox(ctx, id, x, y, w, h, color, selected=false, label='') {
-    if(ctx.hitTestRect(x, y, w, h)) {
-        ctx.recordHitTest('node', id, 
-            distancePointToRectangle(ctx.mouse, x, y, w, h),
-            w * h
-        );
-    }
-
     if (selected || hot(ctx, id)) {
         ctx.nineSlicePlane(x - 13, y - 13, w + 26, h + 26, 'assets/RegularNode_shadow_selected.png', 21, 21, 21, 21);
     }
@@ -168,6 +161,13 @@ export function node(ctx, state, nodeId) {
     const y = nodes.y[nodeId];
     const w = nodes.w[nodeId];
     const h = nodes.h[nodeId];
+
+    if(ctx.hitTestRect(x, y, w, h)) {
+        ctx.recordHitTest('node', nodeId, 
+            distancePointToRectangle(ctx.mouse, x, y, w, h),
+            w * h
+        );
+    }
 
     drawBox(ctx, 
         nodeId,

@@ -94,20 +94,26 @@ export function CanvasInput(o) {
 
   // setup main canvas events
   if (self._canvas) {
-    self._canvas.addEventListener('mousemove', function(e) {
+    self.mouseMoveListener = function(e) {
       e = e || window.event;
       self.mousemove(e, self);
-    }, false);
+    };
 
-    self._canvas.addEventListener('mousedown', function(e) {
+    self._canvas.addEventListener('mousemove', self.mouseMoveListener, false);
+
+    self.mouseDownListener = function(e) {
       e = e || window.event;
       self.mousedown(e, self);
-    }, false);
+    };
 
-    self._canvas.addEventListener('mouseup', function(e) {
+    self._canvas.addEventListener('mousedown', self.mouseDownListener, false);
+
+    self.mouseUpListener = function(e) {
       e = e || window.event;
       self.mouseup(e, self);
-    }, false);
+    };
+
+    self._canvas.addEventListener('mouseup', self.mouseUpListener, false);
   }
 
   // setup a global mouseup to blur the input outside of the canvas
@@ -1188,7 +1194,7 @@ CanvasInput.prototype = {
   },
 
   /**
-   * Destroy this input and stop rendering it.
+   * `Destroy` this input and stop rendering it.
    */
   destroy: function() {
     var self = this;
@@ -1206,6 +1212,10 @@ CanvasInput.prototype = {
 
     // remove the hidden input box
     document.body.removeChild(self._hiddenInput);
+
+    self._canvas.removeEventListener('mousemove', self.mouseMoveListener);
+    self._canvas.removeEventListener('mouseup', self.mouseUpListener);
+    self._canvas.removeEventListener('mousedown', self.mouseDownListener);
 
     // remove off-DOM canvas
     self._renderCanvas = null;

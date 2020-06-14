@@ -11,7 +11,7 @@ export function autosave() {
     if (now - lastSaveTime > SAVE_INTERVAL_MS) {
         save();
         lastSaveTime = now;
-    }
+    }  
 }
 
 export function save() {

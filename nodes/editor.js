@@ -25,10 +25,10 @@ export function valueEditor(ctx, state, id, value, x, y, w, h, type) {
     const valueString = value(id).toString();
 
     if (ctx.hitTestResult && ctx.hitTestResult.type === 'editor' && ctx.hitTestResult.id === id) {
-        ctx.drawRect(x, y, w, h, 'rgba(255, 255, 255, 0.2)');
+        ctx.drawRect(x, y, w, h, 'rgba(255, 255, 255, 0.1)');
     }
     else {
-        ctx.drawRect(x, y, w, h, 'rgba(255, 255, 255, 0.1)');
+        // ctx.drawRect(x, y, w, h, 'rgba(255, 255, 255, 0.1)');
     }
 
     if (state.editing && state.editing.portId === id) {

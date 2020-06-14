@@ -11,6 +11,13 @@ export const menuState = {
 
 let searchString = '';
 
+let menuHeight = 30;
+
+export function menuBox(ctx, x, y, w, h) {
+    ctx.nineSlicePlane(x - 13, y - 13, w + 26, h + 26, 'assets/RegularNode_shadow.png', 21, 21, 21, 21);
+    ctx.nineSlicePlane(x, y, w, h, 'assets/RegularNode_body.png', 14, 14, 14, 14);
+}
+
 /**
  * 
  * @param {Context} ctx 
@@ -19,17 +26,28 @@ export function menu(ctx) {
     if (!menuState.displayed) {
         return;
     }
+
     const x = menuState.x;
     const y = menuState.y;
     const w = 150;
-    const h = 300;
+    const h = menuHeight;
     const rowHeight = 20;
+
+    if(!ctx.hitTestRect(x, y, w, h) && ctx.mouse.mouseDown) {
+        menuState.displayed = false;
+        return;
+    }
+
+    menuBox(ctx, x, y, w,h);
+
+    let cy = y + 5;
+    const pad = 5;
 
     ctx.inputText(-1, 
         (id, value) => value === undefined ? searchString : searchString=value,
-        x, y, w, rowHeight, 'string'); 
+        x + pad, cy, w - pad * 2, rowHeight, 'string'); 
 
-    let cy = y + rowHeight;
+    cy += rowHeight;
 
     for (let i=0; i<types.length; i++) {
         const typeInfo = types[i];
@@ -40,8 +58,10 @@ export function menu(ctx) {
                     w * rowHeight);
             }
             const hot = ctx.hitTestResult && ctx.hitTestResult.type === 'typeButton' && ctx.hitTestResult.id === i;
-            ctx.drawRect(x, cy, w, rowHeight, hot ? 'blue' : 'darkblue');
-            ctx.drawText(x, cy, w, rowHeight, typeInfo.title);
+            if (hot) {
+                ctx.nineSlicePlane(x + 1, cy, w - 2, rowHeight, 'assets/RegularNode_color_spill.png', 6, 6, 1, 1, 0x80ccddcc);
+            }
+            ctx.drawText(x + 2*pad, cy + 2, w - pad * 4, rowHeight, typeInfo.title);
             cy += rowHeight;
 
             if (ctx.mouse.mouseDown && hot) {
@@ -50,4 +70,6 @@ export function menu(ctx) {
             }
         }
     }
+
+    menuHeight = cy - y + pad;
 }
