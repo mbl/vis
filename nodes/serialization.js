@@ -1,4 +1,4 @@
-import { nodes, getNodePorts, addNode } from "./nodes.js";
+import { nodes, getNodePorts, addNode, addNodeWithId } from "./nodes.js";
 import { types } from "./types.js";
 import { ports, findPortByLabel } from "./ports.js";
 import { addConnection } from "./connections.js";
@@ -62,6 +62,7 @@ export function save() {
         }
 
         const node = {
+            id: i,
             type: types[nodes.type[i]].type,
             x: nodes.x[i],
             y: nodes.y[i],
@@ -88,25 +89,36 @@ export function load() {
         ports.num = 0;
         ports.numDeleted = 0;
 
+        let prevNodeId = 0;
+
         // Load all the nodes
         for (let i = 0; i < graph.nodes.length; i++) {
             const node = graph.nodes[i];
-            addNode(nodes, node.type, node.x, node.y);
+            nodes.deleted[node.id] = 0;
+            if (node.id - 1 > prevNodeId) {
+                for (let d=prevNodeId + 1; d < node.id; d++) {
+                    nodes.deleted[d] = 1;
+                    nodes.numDeleted++;
+                }
+            }
+            prevNodeId = addNodeWithId(nodes, node.id, node.type, node.x, node.y);
+            nodes.num = Math.max(nodes.num, prevNodeId);
         }
 
         // Connect the nodes
-        for (let i = 1; i <= nodes.num; i++) {
-            const node = graph.nodes[i - 1];
+        for (let i = 0; i < graph.nodes.length; i++) {
+            const node = graph.nodes[i];
+            const nodeId = node.id;
             for (let p = 0; p < node.ports.length; p++) {
                 const port = node.ports[p];
                 if (port.connectedTo) {
                     const portFrom = findPortByLabel(port.connectedTo.nodeId, port.connectedTo.label);
-                    const portTo = findPortByLabel(i, port.label);
+                    const portTo = findPortByLabel(nodeId, port.label);
 
                     addConnection(portFrom, portTo);
                 }
                 else {
-                    const portId = findPortByLabel(i, port.label);
+                    const portId = findPortByLabel(nodeId, port.label);
                     ports.value[portId] = port.value;
                 }
             }

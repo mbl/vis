@@ -69,11 +69,14 @@ export function allocateNode(nodes) {
  * Register a node, return its index
  * @param {string} type Type of the node
  */
-export function addNode(nodes, type, x, y) {
+export function addNode(nodes, type, x, y) {    
+    const nodeId = allocateNode(nodes);
+    return addNodeWithId(nodes, nodeId, type, x, y);
+}
+
+export function addNodeWithId(nodes, nodeId, type, x, y) {
     const typeId = getType(type);
     const typeInfo = types[typeId];
-    
-    const nodeId = allocateNode(nodes);
 
     nodes.x[nodeId] = x;
     nodes.y[nodeId] = y;
