@@ -193,11 +193,14 @@ export function node(ctx, state, nodeId) {
             else {
                 // Output port
                 drawPort(ctx, portId, x + w - 22, py + 7, 0xffcce00e, !!ports.numConnections[portId]);
-                ctx.drawText(x + 8, py, 40 - 8, portHeight, ports.label[portId]);
                 // Display value if possible, also add editor
                 const portTypeInfo = typeInfo.ports[ports.order[portId]];
                 if (portTypeInfo.editor) {
+                    ctx.drawText(x + 8, py, 40 - 8, portHeight, ports.label[portId]);
                     ctx.inputText(portId, portValue, x + 40, py, w - 40 - 25, portHeight, portTypeInfo.type);
+                }
+                else {
+                    ctx.drawText(x + 8, py, w - 25, portHeight, ports.label[portId]);
                 }
             }
         }
@@ -205,7 +208,9 @@ export function node(ctx, state, nodeId) {
 
     if (typeInfo.preview) {
         const pH = typeInfo.preview.height;
+        ctx.clip(x + 3, y + h - pH + 3, w - 6, pH - 6);
         typeInfo.preview.draw(nodeId, ctx, x + 3, y + h - pH + 3, w - 6, pH - 6);
+        ctx.unclip();
     }
 }
 

@@ -87,8 +87,21 @@ export class Context {
     }
 
     drawRect(x, y, w, h, fill) {
+        if (Number.isInteger(fill)) {
+            fill = colorARGBToCSS(fill);
+        }
         this.ctx.fillStyle = fill;
         this.ctx.fillRect(x, y, w, h);
+    }
+
+    clip(x, y, w, h) {
+        this.ctx.save();
+        this.ctx.rect(x, y, w, h);
+        this.ctx.clip();
+    }
+
+    unclip() {
+        this.ctx.restore();
     }
 
     sprite(x, y, texture, tint = null) {
@@ -141,9 +154,12 @@ export class Context {
         this.ctx.font = `${fontSize}px Arial`;
         this.ctx.fillStyle = color;
         this.ctx.textBaseline = 'middle';
-        // TODO: crop text if to wide
+        this.ctx.rect(x, y, w, h);
+        this.ctx.save();
+        this.ctx.clip();
         // this.drawRect(x, y, w, h, 'rgba(0, 255, 0, 0.1)');
         this.ctx.fillText(text, x, y + h / 2);
+        this.ctx.restore();
     }
 
     drawBezier(x1, y1, x2, y2, x3, y3, x4, y4, color, lineWidth = 1) {
