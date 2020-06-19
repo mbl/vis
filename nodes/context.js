@@ -1,6 +1,5 @@
 import { TextureCache } from './textureCache.js';
 import { colorARGBToCSS } from './tools/colors.js';
-import { ports } from './ports.js';
 import { Mouse } from './mouse.js';
 import { valueEditor, checkStartEditing } from './editor.js';
 import { Keyboard } from './keyboard.js';
@@ -174,16 +173,15 @@ export class Context {
 
     /**
      * Draw editor for a value of a given type
-     * @param {number} id 
-     * @param {(number, any) => any} value When called with one parameter, get value for id, otherwise set value for id to given value
+     * @param {{ value: any }} obj Object with value to be edited
      * @param {number} x 
      * @param {number} y 
      * @param {number} w 
      * @param {number} h 
      * @param {string} type 
      */
-    inputText(id, value, x, y, w, h, type) {
-        valueEditor(this, this.editorState, id, value, x, y, w, h, type);
+    inputText(obj, x, y, w, h, type) {
+        valueEditor(this, this.editorState, obj, x, y, w, h, type);
     }
 
     /**
@@ -233,9 +231,9 @@ export class Context {
         return newTest.relDistance < oldTest.relDistance;
     }
 
-    recordHitTest(type, id, distance, relDistance) {
+    recordHitTest(type, obj, distance, relDistance) {
         const hitTestData = {
-            type, id, distance, relDistance
+            type, obj, distance, relDistance
         };
 
         if (this.partialHitTestResult === null || 

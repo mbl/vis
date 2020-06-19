@@ -1,45 +1,43 @@
-import { nodes, getNodePorts } from "./nodes.js";
-import { ports } from "./ports.js";
+import { nodes } from "./nodes.js";
 import { types } from "./types.js";
-import { connectedTo } from "./connections.js";
 
 /**
  * Run the interpreter until all possible nodes are evaluated.
  */
 export function run(ctx) {
-    const evaluated = new Array(nodes.num);
+    const evaluated = new Array(nodes.length);
     let numEvaluated = 0;
     let prevNumEvaluated = -1;
 
-    while(numEvaluated < nodes.num && prevNumEvaluated < numEvaluated) {
+    while(numEvaluated < nodes.length && prevNumEvaluated < numEvaluated) {
         prevNumEvaluated = numEvaluated;
 
-        for (let nodeId=1; nodeId<=nodes.num; nodeId++) {
+        for (let nodeId=0; nodeId<nodes.length; nodeId++) {
             if (evaluated[nodeId]) {
                 continue;
             }
 
-            const portIds = getNodePorts(nodeId);
-            const typeInfo = types[nodes.type[nodeId]];
+            const node = nodes[nodeId];
+            const typeInfo = node.type;
             const input = [];
             let readyToEvaluate = true;
-            for (let p=0; p<portIds.length; p++) {
-                const portId = portIds[p];
-                if (!ports.output[portId]) {
-                    const outputPortId = connectedTo(portId);
-                    if (outputPortId) {
+            for (let p=0; p<node.ports.length; p++) {
+                const port = node.ports[p];
+                if (!port.type.output) {
+                    const outputPort = port.connectedTo;
+                    if (outputPort) {
                         // The node that provides the output
-                        const outputNodeId = ports.nodeId[outputPortId];
-                        if (!evaluated[outputNodeId]) {
+                        const outputNode = outputPort.node;
+                        if (!evaluated[outputNode.id]) {
                             readyToEvaluate = false;
                             break;
                         }
                         // Store value to input array
-                        input[ports.order[portId]] = ports.value[outputPortId];
+                        input[p] = outputPort.value;
                     } 
                     else {
-                        if (typeInfo.ports[ports.order[portId]].defaultValue) {
-                            input[ports.order[portId]] = typeInfo.ports[ports.order[portId]].defaultValue;
+                        if (typeInfo.ports[p].defaultValue) {
+                            input[p] = typeInfo.ports[p].defaultValue;
                         }
                         else {
                             readyToEvaluate = false;
@@ -53,9 +51,10 @@ export function run(ctx) {
                 if (typeInfo.evaluate) {
                     const result = typeInfo.evaluate.apply(null, input);
                     let outputNum = 0;
-                    for (let i=1; i<=ports.num; i++) {
-                        if (ports.nodeId[i] === nodeId && ports.output[i]) {
-                            ports.value[i] = result[outputNum];
+                    for (let i=0; i<node.ports.length; i++) {
+                        const port = node.ports[i];
+                        if (port.type.output) {
+                            port.value = result[outputNum];
                             outputNum++;
                         }
                     }

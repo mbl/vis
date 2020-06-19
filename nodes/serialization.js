@@ -1,7 +1,6 @@
-import { nodes, getNodePorts, addNode, addNodeWithId } from "./nodes.js";
-import { types } from "./types.js";
-import { ports, findPortByLabel } from "./ports.js";
+import { nodes, Node } from "./nodes.js";
 import { addConnection } from "./connections.js";
+import { getType } from "./types.js";
 
 let lastSaveTime = 0;
 const SAVE_INTERVAL_MS = 5000;
@@ -20,56 +19,55 @@ export function save() {
         nodes: [],
     };
 
-    for (let i=1; i<=nodes.num; i++) {
-        if (nodes.deleted[i]) {
-            continue;
-        }
+    for (let i=0; i<nodes.length; i++) {
+        nodes[i].id = i;
+    }
 
-        const typeInfo = types[nodes.type[i]];
+    for (let i=0; i<nodes.length; i++) {
+        const node = nodes[i];
 
-        const portsArray = [];
-        const portIds = getNodePorts(i);
+        const typeInfo = node.type;
 
-        for (let p = 0; p < portIds.length; p++) {
-            const portId = portIds[p];
-            const portInfo = typeInfo.ports[ports.order[portId]];
+        const serializedPorts = [];
 
-            const connectedTo = ports.connectedTo[portId];
+        for (let p = 0; p < node.ports.length; p++) {
+            const port = node.ports[p];
+            const portInfo = port.type;
+
+            const connectedTo = port.connectedTo;
             if (portInfo.output && portInfo.editor) {
                 const defaultValue = portInfo.defaultValue;
-                const value = ports.value[portId];
+                const value = port.value;
 
                 if (value !== defaultValue) {
-                    portsArray.push({
+                    serializedPorts.push({
                         label: portInfo.label,
                         value,
                     });
                 }
             }
             else if (!portInfo.output && connectedTo) {
-                const connectedToNode = ports.nodeId[connectedTo];
-                const connectedNodeTypeInfo = types[nodes.type[connectedToNode]];
-                const connectedPortInfo = connectedNodeTypeInfo.ports[ports.order[connectedTo]];
+                const connectedPortInfo = connectedTo.type;
 
-                portsArray.push({
+                serializedPorts.push({
                     label: portInfo.label,
                     connectedTo: {
-                        nodeId: connectedToNode,
+                        nodeId: port.connectedTo.node.id,
                         label: connectedPortInfo.label,
                     }
                 });
             }
         }
 
-        const node = {
-            id: i,
-            type: types[nodes.type[i]].type,
-            x: nodes.x[i],
-            y: nodes.y[i],
-            ports: portsArray,
+        const serializedNode = {
+            id: node.id,
+            type: node.type.type,
+            x: node.x,
+            y: node.y,
+            ports: serializedPorts,
         };
 
-        result.nodes.push(node);
+        result.nodes.push(serializedNode);
     }
 
     localStorage.setItem('graph', JSON.stringify(result, null, 2));
@@ -84,42 +82,40 @@ export function load() {
             throw new Error(`Cannot load graph. Unsupported version ${graph.version}`);
         }
 
-        nodes.num = 0;
-        nodes.numDeleted = 0;
-        ports.num = 0;
-        ports.numDeleted = 0;
-
-        let prevNodeId = 0;
-
+        nodes.length = 0;
         // Load all the nodes
+
+        const nodeIdMap = {};
+
         for (let i = 0; i < graph.nodes.length; i++) {
-            const node = graph.nodes[i];
-            nodes.deleted[node.id] = 0;
-            if (node.id - 1 > prevNodeId) {
-                for (let d=prevNodeId + 1; d < node.id; d++) {
-                    nodes.deleted[d] = 1;
-                    nodes.numDeleted++;
-                }
-            }
-            prevNodeId = addNodeWithId(nodes, node.id, node.type, node.x, node.y);
-            nodes.num = Math.max(nodes.num, prevNodeId);
+            const serializedNode = graph.nodes[i];
+            const type = getType(serializedNode.type);
+            const node = new Node(type, serializedNode.x, serializedNode.y);
+            nodes.push(node);
+            node.id = i;
+            nodeIdMap[serializedNode.id] = node;
         }
 
         // Connect the nodes
-        for (let i = 0; i < graph.nodes.length; i++) {
-            const node = graph.nodes[i];
-            const nodeId = node.id;
-            for (let p = 0; p < node.ports.length; p++) {
-                const port = node.ports[p];
-                if (port.connectedTo) {
-                    const portFrom = findPortByLabel(port.connectedTo.nodeId, port.connectedTo.label);
-                    const portTo = findPortByLabel(nodeId, port.label);
+        for (let i = 0; i < nodes.length; i++) {
+            const node = nodes[i];
+            const serializedNode = graph.nodes[i];
+            for (let p = 0; p < serializedNode.ports.length; p++) {
+                const serializedPort = serializedNode.ports[p];
+                if (serializedPort.connectedTo) {
+                    const portFrom = nodeIdMap[serializedPort.connectedTo.nodeId].findPortByLabel(serializedPort.connectedTo.label);
+                    const portTo = node.findPortByLabel(serializedPort.label);
 
                     addConnection(portFrom, portTo);
                 }
                 else {
-                    const portId = findPortByLabel(nodeId, port.label);
-                    ports.value[portId] = port.value;
+                    const port = node.findPortByLabel(serializedPort.label);
+                    if (serializedPort.value !== undefined) {
+                        port.value = serializedPort.value;
+                    }
+                    else {
+                        port.value = port.type.defaultValue;
+                    }
                 }
             }
         }

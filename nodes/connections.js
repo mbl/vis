@@ -1,55 +1,88 @@
-import { ports } from './ports.js';
+import { Node } from './nodes.js';
+import { Port } from './ports.js';
 import { Context } from './context.js';
 
+/**
+ * 
+ * @param {Port} from 
+ * @param {Port} to 
+ */
 export function addConnection(from, to) {
-    if (!ports.connectedTo[to]) {
-        ports.connectedTo[to] = from;
-        ports.numConnections[from]++;
+    function add(f, t) {
+        if (f && t && !t.connectedTo) {
+            t.connectedTo = f;
+            f.numConnections++;
+        }    
+    }
+
+    if (from && from.type.output) {
+        add(from, to);
+    }
+    else {
+        add(to, from);
     }
 }
 
+/**
+ * 
+ * @param {Port} from 
+ * @param {Port} to 
+ */
 export function removeConnection(from, to) {
-    if (ports.connectedTo[to] === from) {
-        ports.connectedTo[to] = 0;
-        ports.numConnections[from]--;
+    if (to.connectedTo === from) {
+        to.connectedTo = null;
+        from.numConnections--;
     }
 }
 
-export function removeConnections(nodeId) {
-    for (let i = 1; i <= ports.num; i++) {
-        if (ports.connectedTo[i]) {
-            if (ports.nodeId[ports.connectedTo[i]] === nodeId) {
-                removeConnection(ports.connectedTo[i], i);
-            }
-            else if (ports.nodeId[i] === nodeId) {
-                removeConnection(ports.connectedTo[i], i);
+/**
+ * 
+ * @param {Node} node 
+ * @param {Node[]} nodes
+ */
+export function removeConnections(node, nodes) {
+    node.ports.forEach(
+        (port) => {
+            if (port.connectedTo) {
+                removeConnection(port.connectedTo, port);
             }
         }
-    }
+    )
+
+    nodes.forEach((n) => {
+        n.ports.forEach((p) => {
+            if (p.connectedTo && p.connectedTo.node === node) {
+                removeConnection(p.connectedTo, p);
+            }
+        });
+    });
 }
 
 /**
  * Draw all existing connections including the one being currently created.
  * 
  * @param {Context} ctx 
+ * @param {*} state
+ * @param {Node[]} nodes
  */
-export function drawConnections(ctx, state) {
-    for (let i = 1; i <= ports.num; i++) {
-        if (ports.connectedTo[i]) {
-            drawConnection(ctx, ports.connectedTo[i], i);
-        }
-    }
+export function drawConnections(ctx, state, nodes) {
+    nodes.forEach((node) => {
+        node.ports.forEach((port) => {
+            if (port.connectedTo) {
+                drawConnection(ctx, port.connectedTo, port);
+            }
+        });
+    })
     if (state.connecting) {
-        if (state.connecting.end === -1) {
+        if (state.connecting.end === null) {
             ctx.drawLine(
                 ctx.mouse.x, ctx.mouse.y, 
-                ports.x[state.connecting.start],
-                ports.y[state.connecting.start],
+                state.connecting.start.x, state.connecting.start.y,
                 'red',
                 1);
         }
         else {
-            if (state.connecting.startIsOutput) {
+            if (state.connecting.start.type.output) {
                 drawConnection(ctx, state.connecting.start, state.connecting.end);
             }
             else {
@@ -62,21 +95,19 @@ export function drawConnections(ctx, state) {
 export function checkStartConnecting(ctx, state) {
     if (ctx.mouse.mouseDown && ctx.hitTestResult && ctx.hitTestResult.type === 'port') {
         state.currentOperation = 'connecting';
-        const portId = ctx.hitTestResult.id;
+        const port = ctx.hitTestResult.obj;
 
-        if (ports.connectedTo[portId]) {
+        if (port.connectedTo) {
             state.connecting = {
-                start: ports.connectedTo[portId],
-                end: portId,
-                startIsOutput: 1,
+                start: port.connectedTo,
+                end: port,
             };
-            removeConnection(ports.connectedTo[portId], portId);
+            removeConnection(port.connectedTo, port);
         }
         else {
             state.connecting = {
-                start: portId,
-                end: -1,
-                startIsOutput: ports.output[portId],
+                start: port,
+                end: null,
             };
         }
     }
@@ -84,10 +115,13 @@ export function checkStartConnecting(ctx, state) {
 
 /** 
  * Can two ports be connected to each other?
+ * 
+ * @param {Port} port1
+ * @param {Port} port2
  */
 export function portsCompatible(port1, port2) {
     // TODO: typecheck
-    return ports.output[port1] !== ports.output[port2];
+    return port1.type.output !== port2.type.output;
 }
 
 /**
@@ -96,46 +130,34 @@ export function portsCompatible(port1, port2) {
  */
 export function connect(ctx, state) {
     if (ctx.hitTestResult && ctx.hitTestResult.type === 'port' &&
-        portsCompatible(ctx.hitTestResult.id, state.connecting.start)
+        portsCompatible(ctx.hitTestResult.obj, state.connecting.start)
     ) {
-        state.connecting.end = ctx.hitTestResult.id;
+        state.connecting.end = ctx.hitTestResult.obj;
     }
     else {
-        state.connecting.end = -1;
+        state.connecting.end = null;
     }
 
     if (ctx.mouse.mouseUp) {
-        if (state.connecting.end !== -1) {
-            if (state.connecting.startIsOutput) {
-                addConnection(state.connecting.start, state.connecting.end);
-            }
-            else {
-                addConnection(state.connecting.end, state.connecting.start);
-            }
-        }
+        addConnection(state.connecting.start, state.connecting.end);
 
         state.connecting = null;
         state.currentOperation = null;
     }
 }
 
-/**
- * @param {number} portId 
- * @return ID of the port this port is connected to or 0 if not connected.
- */
-export function connectedTo(portId) {
-    return ports.connectedTo[portId];
-}
-
 /** 
  * Draws a single connection between two ports.
+ * @param {Port} portFrom
+ * @param {Port} portTo
  */
-export function drawConnection(ctx, portFromId, portToId) {
-    const p1 = portFromId;
-    const p2 = portToId;
+export function drawConnection(ctx, portFrom, portTo) {
+    const p1 = portFrom;
+    const p2 = portTo;
 
     // Weird heuristic attempting to make the result look good
-    let dx = ports.x[p2] - ports.x[p1]; // Delta x
+    // TODO: still not optimal, improve!
+    let dx = p2.x - p1.x; // Delta x
     if (Math.abs(dx) < 1e-3) {
         dx = Math.sign(dx) * 1e-3;
     }
@@ -155,10 +177,10 @@ export function drawConnection(ctx, portFromId, portToId) {
     const offset = Math.max(offsetA, offsetB);
     
     ctx.drawBezier(
-        ports.x[p1], ports.y[p1],
-        ports.x[p1] + offset, ports.y[p1],
-        ports.x[p2] - offset, ports.y[p2],
-        ports.x[p2], ports.y[p2],
+        p1.x, p1.y,
+        p1.x + offset, p1.y,
+        p2.x - offset, p2.y,
+        p2.x, p2.y,
         'white',
         3
     );

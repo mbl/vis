@@ -1,21 +1,11 @@
-import { getNodePorts } from "./nodes.js";
-import { ports, findPortByLabel } from "./ports.js";
+import { Node } from "./nodes.js";
 import { Context } from "./context.js";
-
-function getPortValue(nodeId, label) {
-    const portId = findPortByLabel(nodeId, label);
-    const sourcePort = ports.connectedTo[portId];
-    if (sourcePort) {
-        return ports.value[sourcePort];
-    }
-    return undefined;
-}
 
 /**
  * Array Length.
  * @param {ArrayBufferView | number} x 
  */
-function al(x) { 
+function al(x) {
     return ArrayBuffer.isView(x) ? x.length : 1;
 }
 
@@ -36,14 +26,47 @@ function gv(a, i) {
     return ArrayBuffer.isView(a) ? a[i % a.length] : a;
 }
 
+export class PortType {
+    /**
+     * @param {number} output 
+     * @param {string} label 
+     * @param {string} type 
+     * @param {any} defaultValue 
+     * @param {number} editor 
+     */
+    constructor(output, label, type, defaultValue, editor) {
+
+    }
+}
+
+export class NodeType {
+    /**
+     * @param {string} type 
+     * @param {string} title 
+     * @param {number} color 
+     * @param {number} w 
+     * @param {PortType[]} ports 
+     */
+    constructor(type, title, color, w, ports) {
+        this.type = type;
+        this.title = title;
+        this.color = color;
+        this.w = w;
+        this.ports = ports;
+    }
+}
+
+/** 
+ * @constant {NodeType[]} 
+ */
 export const types = [
-    { 
+    {
         type: 'number',
         title: 'Number',
         color: 0xffcce00e,
         w: 100,
         ports: [
-            { 
+            {
                 output: 1,
                 label: 'value',
                 type: 'float32',
@@ -53,15 +76,18 @@ export const types = [
         ]
     },
 
-    { 
+    {
         type: 'displayNumber',
         title: 'Display',
         w: 120,
         color: 0xffe0cc0e,
         preview: {
             height: 100,
-            draw: (nodeId, ctx, x, y, w, h) => {
-                let number = getPortValue(nodeId, 'value');
+            /**
+             * @param {Node} node
+             */
+            draw: (node, ctx, x, y, w, h) => {
+                let number = node.getPortValue('value');
                 if (ArrayBuffer.isView(number)) {
                     const lineHeight = Math.max(1.0, h / number.length);
                     for (let i = 0; i < number.length; i++) {
@@ -80,7 +106,7 @@ export const types = [
             }
         },
         ports: [
-            { 
+            {
                 output: 0,
                 label: 'value',
                 type: 'float32',
@@ -89,7 +115,7 @@ export const types = [
         ]
     },
 
-    { 
+    {
         type: 'plus',
         title: '+',
         w: 55,
@@ -107,19 +133,19 @@ export const types = [
             return ra(result);
         },
         ports: [
-            { 
+            {
                 output: 0,
                 label: 'a',
                 type: 'float32[]',
                 defaultValue: 0,
             },
-            { 
+            {
                 output: 0,
                 label: 'b',
                 type: 'float32[]',
                 defaultValue: 0,
             },
-            { 
+            {
                 output: 1,
                 label: 'a+b',
                 type: 'float32[]',
@@ -127,7 +153,7 @@ export const types = [
         ]
     },
 
-    { 
+    {
         type: 'minus',
         title: '-',
         w: 55,
@@ -145,19 +171,19 @@ export const types = [
             return ra(result);
         },
         ports: [
-            { 
+            {
                 output: 0,
                 label: 'a',
                 type: 'float32[]',
                 defaultValue: 0,
             },
-            { 
+            {
                 output: 0,
                 label: 'b',
                 type: 'float32[]',
                 defaultValue: 0,
             },
-            { 
+            {
                 output: 1,
                 label: 'a-b',
                 type: 'float32[]',
@@ -165,7 +191,7 @@ export const types = [
         ]
     },
 
-    { 
+    {
         type: 'multiply',
         title: '*',
         w: 55,
@@ -183,19 +209,19 @@ export const types = [
             return ra(result);
         },
         ports: [
-            { 
+            {
                 output: 0,
                 label: 'a',
                 type: 'float32[]',
                 defaultValue: 0,
             },
-            { 
+            {
                 output: 0,
                 label: 'b',
                 type: 'float32[]',
                 defaultValue: 0,
             },
-            { 
+            {
                 output: 1,
                 label: 'a*b',
                 type: 'float32[]',
@@ -203,7 +229,7 @@ export const types = [
         ]
     },
 
-    { 
+    {
         type: 'divide',
         title: '/',
         w: 55,
@@ -221,19 +247,19 @@ export const types = [
             return ra(result);
         },
         ports: [
-            { 
+            {
                 output: 0,
                 label: 'a',
                 type: 'float32[]',
                 defaultValue: 0,
             },
-            { 
+            {
                 output: 0,
                 label: 'b',
                 type: 'float32[]',
                 defaultValue: 0,
             },
-            { 
+            {
                 output: 1,
                 label: 'a/b',
                 type: 'float32[]',
@@ -241,7 +267,7 @@ export const types = [
         ]
     },
 
-    { 
+    {
         type: 'sigmoid',
         title: 'sigmoid',
         w: 80,
@@ -259,13 +285,13 @@ export const types = [
             return ra(result);
         },
         ports: [
-            { 
+            {
                 output: 0,
                 label: 'a',
                 type: 'float32[]',
                 defaultValue: 0,
             },
-            { 
+            {
                 output: 1,
                 label: 'sigmoid',
                 type: 'float32[]',
@@ -273,7 +299,7 @@ export const types = [
         ]
     },
 
-    { 
+    {
         type: 'displayRectangles',
         title: 'Display Rectangles',
         w: 220,
@@ -283,19 +309,19 @@ export const types = [
             /**
              * @param {Context} ctx
              */
-            draw: (nodeId, ctx, x, y, w, h) => {
-                const xa = getPortValue(nodeId, 'x');
-                const ya = getPortValue(nodeId, 'y');
-                const wa = getPortValue(nodeId, 'w');
-                const ha = getPortValue(nodeId, 'h');
-                const ca = getPortValue(nodeId, 'color');
+            draw: (node, ctx, x, y, w, h) => {
+                const xa = node.getPortValue('x');
+                const ya = node.getPortValue('y');
+                const wa = node.getPortValue('w');
+                const ha = node.getPortValue('h');
+                const ca = node.getPortValue('color');
 
                 if (!xa || !ya || !wa || !ha || !ca) {
                     // xa.length !== ya.length || 
                     // xa.length !== wa.length ||
                     // xa.length !== ha.length ||
                     // xa.length !== ca.length) {
-                        ctx.drawText(x, y, w, h, '!', 'red', 48);
+                    ctx.drawText(x, y, w, h, '!', 'red', 48);
                 }
                 else {
                     const l = Math.max(al(xa), al(ya), al(wa), al(ha), al(ca));
@@ -306,38 +332,38 @@ export const types = [
                         const wv = gv(wa, i);
                         const hv = gv(ha, i);
                         const cv = gv(ca, i);
-                        
+
                         ctx.drawRect(x + xv * w, y + yv * h, wv * w, hv * h, cv);
                     }
                 }
             }
         },
         ports: [
-            { 
+            {
                 output: 0,
                 label: 'x',
                 type: 'float32[]',
                 defaultValue: [],
             },
-            { 
+            {
                 output: 0,
                 label: 'y',
                 type: 'float32[]',
                 defaultValue: [],
             },
-            { 
+            {
                 output: 0,
                 label: 'w',
                 type: 'float32[]',
                 defaultValue: [],
             },
-            { 
+            {
                 output: 0,
                 label: 'h',
                 type: 'float32[]',
                 defaultValue: [],
             },
-            { 
+            {
                 output: 0,
                 label: 'color',
                 type: 'uint32[]',
@@ -346,7 +372,7 @@ export const types = [
         ]
     },
 
-    { 
+    {
         type: 'random',
         title: 'Random',
         color: 0xffffe00e,
@@ -354,20 +380,20 @@ export const types = [
         evaluate: (n) => {
             const ni = n | 0;
             const result = new Float32Array(ni);
-            for (let i =0; i < ni; i++) {
+            for (let i = 0; i < ni; i++) {
                 result[i] = Math.random();
             }
             return [result];
         },
         ports: [
-            { 
+            {
                 output: 0,
                 label: 'n',
                 type: 'uint32',
                 defaultValue: 1,
                 editor: 0,
             },
-            { 
+            {
                 output: 1,
                 label: 'value',
                 type: 'float32[]',
@@ -379,6 +405,11 @@ export const types = [
 
 ];
 
+/**
+ * 
+ * @param {string} type 
+ * @return {NodeType} Type information about the node
+ */
 export function getType(type) {
-    return types.findIndex((x) => x.type === type);
+    return types.find((x) => x.type === type);
 }

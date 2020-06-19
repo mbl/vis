@@ -1,9 +1,7 @@
 import { grid } from "./grid.js";
 import { drawNodes, nodes } from "./nodes.js"
 import { Context } from "./context.js"
-import { ports } from "./ports.js";
 import { checkStartConnecting, connect, portsCompatible, drawConnections } from "./connections.js";
-import { checkStartEditing } from "./editor.js";
 import { run } from "./interpreter.js";
 import { menu, menuState } from "./menu.js";
 import { autosave } from "./serialization.js";
@@ -49,7 +47,7 @@ export function loop(ctx) {
     
     run(ctx);
 
-    drawConnections(ctx, state);
+    drawConnections(ctx, state, nodes);
     drawNodes(ctx, state, nodes);
     menu(ctx);
 
@@ -63,17 +61,17 @@ export function loop(ctx) {
 
 function checkStartDragging(ctx) {
     if (ctx.mouse.mouseDown && ctx.hitTestResult && ctx.hitTestResult.type === 'node') {
-        const nodeId = ctx.hitTestResult.id;
+        const node = ctx.hitTestResult.obj;
         state.currentOperation = 'dragging';
         state.dragging = {
-            nodeId,
+            node,
             startMouse: {
                 x: ctx.mouse.x,
                 y: ctx.mouse.y,
             },
             startNode: {
-                x: nodes.x[nodeId],
-                y: nodes.y[nodeId],
+                x: node.x,
+                y: node.y,
             }
         };
     }
@@ -85,34 +83,34 @@ function drag(ctx) {
         state.currentOperation = null;
     }
     if (state.dragging) {
-        const nodeId = state.dragging.nodeId;
-        nodes.x[nodeId] = state.dragging.startNode.x +
+        const node = state.dragging.node;
+        node.x = state.dragging.startNode.x +
             (ctx.mouse.x - state.dragging.startMouse.x);
-        nodes.y[nodeId] = state.dragging.startNode.y +
+        node.y = state.dragging.startNode.y +
             (ctx.mouse.y - state.dragging.startMouse.y);
     }
 }
 
 function connectingHitTest(ctx) {
     if (ctx.hitTestResult && ctx.hitTestResult.type !== 'port') {
-        let compatiblePortId = 0;
+        let compatiblePort = null;
         if (ctx.hitTestResult.type === 'node') {
-            for (let i=1; i <= ports.num; i++) {
-                if (ports.nodeId[i] === ctx.hitTestResult.id) {
-                    if (portsCompatible(i, state.connecting.start)) {
-                        if (compatiblePortId !== 0) {
-                            // I already found a compatible port, so there is ambiguity
-                            compatiblePortId = 0;
-                            break;
-                        }
-                        compatiblePortId = i;
+            const node = ctx.hitTestResult.obj;
+            for (let i = 0; i < node.ports.length; i++) {
+                const port = node.ports[i];
+                if (portsCompatible(port, state.connecting.start)) {
+                    if (compatiblePort !== null) {
+                        // I already found a compatible port, so there is ambiguity
+                        compatiblePort = null;
+                        break;
                     }
+                    compatiblePort = port;
                 }
             }
         }
-        if (compatiblePortId) {
+        if (compatiblePort) {
             ctx.hitTestResult.type = 'port';
-            ctx.hitTestResult.id = compatiblePortId;
+            ctx.hitTestResult.obj = compatiblePort;
         } 
         else {
             ctx.hitTestResult = null;
@@ -131,7 +129,7 @@ function debug(ctx) {
             ctx.hitTestResult = null;
             drawNodes(ctx, state, nodes);
             if (ctx.hitTestResult) {
-                ctx.pixel(x, y, ctx.hitTestResult.id === 1 ? 0x20ff0000 : 0x2000ff00);
+                ctx.pixel(x, y, ctx.hitTestResult.obj && ctx.hitTestResult.obj.id === 1 ? 0x20ff0000 : 0x2000ff00);
             }
         }
     }

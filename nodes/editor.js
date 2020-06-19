@@ -1,37 +1,37 @@
 import { Context } from "./context.js";
 import { distancePointToRectangle } from "./tools/distance.js";
 import { CanvasInput } from "./canvasInput/CanvasInput.js";
+import { Port } from "./ports.js";
 
 /**
  * 
  * @param {Context} ctx 
  * @param {any} state To store information about current editing state
- * @param {function} value A function, when called with empty parameter, get value, when parameter is passed in, set value.
- * @param {number} id Id of the whatever object being edited
+ * @param {{ value: any }} obj Object whose value is being edited
  * @param {number} x 
  * @param {number} y 
  * @param {number} w 
  * @param {number} h 
  * @param {string} type What type are we editing
  */
-export function valueEditor(ctx, state, id, value, x, y, w, h, type) {
+export function valueEditor(ctx, state, obj, x, y, w, h, type) {
     if(ctx.hitTestRect(x, y, w, h)) {
-        ctx.recordHitTest('editor', id, 
+        ctx.recordHitTest('editor', obj, 
             distancePointToRectangle(ctx.mouse, x, y, w, h),
             w * h
         );
     }
     
-    const valueString = value(id).toString();
+    const valueString = obj.value.toString();
 
-    if (ctx.hitTestResult && ctx.hitTestResult.type === 'editor' && ctx.hitTestResult.id === id) {
+    if (ctx.hitTestResult && ctx.hitTestResult.type === 'editor' && ctx.hitTestResult.obj === obj) {
         ctx.drawRect(x, y, w, h, 'rgba(255, 255, 255, 0.1)');
     }
     else {
         // ctx.drawRect(x, y, w, h, 'rgba(255, 255, 255, 0.1)');
     }
 
-    if (state.editing && state.editing.portId === id) {
+    if (state.editing && state.editing.port === obj) {
         if (!state.editing.canvasInput) {
             const canvasInput = new CanvasInput(
                 {
@@ -59,10 +59,10 @@ export function valueEditor(ctx, state, id, value, x, y, w, h, type) {
         state.editing.canvasInput.render();
         const stringValue = state.editing.canvasInput.value();
         if (type === 'float32') {
-            value(id, Number.parseFloat(stringValue));
+            obj.value = Number.parseFloat(stringValue);
         }
         else {
-            value(id, stringValue);
+            obj.value = stringValue;
         }
     }
     else {
@@ -77,8 +77,8 @@ export function valueEditor(ctx, state, id, value, x, y, w, h, type) {
 export function checkStartEditing(ctx, state) {
     if (ctx.mouse.mouseDown) {
         if (ctx.hitTestResult && ctx.hitTestResult.type === 'editor') {
-            const portId = ctx.hitTestResult.id;
-            if (state.editing && state.editing.portId !== portId) {
+            const port = ctx.hitTestResult.obj;
+            if (state.editing && state.editing.port !== port) {
                 stopEditing(state);
             }
         }
@@ -88,10 +88,10 @@ export function checkStartEditing(ctx, state) {
     }
     if (ctx.mouse.mouseUp) {
         if (ctx.hitTestResult && ctx.hitTestResult.type === 'editor') {
-            const portId = ctx.hitTestResult.id;
+            const port = ctx.hitTestResult.obj;
             if (!state.editing) {
                 state.editing = {
-                    portId,
+                    port,
                     canvasInput: null,
                 }
             }
