@@ -35,7 +35,8 @@ export function save() {
             const portInfo = port.type;
 
             const connectedTo = port.connectedTo;
-            if (portInfo.output && portInfo.editor) {
+            if (portInfo.output && portInfo.editor || 
+                !portInfo.output && !port.connectedTo) {
                 const defaultValue = portInfo.defaultValue;
                 const value = port.value;
 

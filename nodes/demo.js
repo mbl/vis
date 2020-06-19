@@ -4,5 +4,5 @@ import { load } from './serialization.js';
 
 load();
 
-const ctx = new Context('container', 1000, 600, () => loop(ctx));
+const ctx = new Context('container', () => loop(ctx));
 ctx.requestRedraw();

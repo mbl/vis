@@ -12,13 +12,13 @@ export class Context {
      * @param {string} elementId Id of element to put the context into
      * @param {() => void} draw Function to redraw everything
      */
-    constructor(elementId, width, height, draw, assetPrefix = '') {        
+    constructor(elementId, draw, assetPrefix = '') {        
         
         const div = document.getElementById(elementId);
+        this.parent = div;
         const canvas = document.createElement('canvas');
         this.canvas = canvas;
-        canvas.width = width;
-        canvas.height = height;
+        this.resize();
 
         div.appendChild(canvas);
         const ctx = canvas.getContext('2d', { alpha: false });
@@ -43,12 +43,16 @@ export class Context {
 
         // Other data
         this.time = Date.now();
+        // Width of a capital M
+        ctx.font = '12px Arial';
+        this.mWidth = ctx.measureText('M').width;
 
         this.editorState = {};
     }
 
     // Context management ---
     newFrame() {
+        this.resize();
         this.hitTestResult = this.partialHitTestResult;
         this.partialHitTestResult = null;
         checkStartEditing(this, this.editorState);
@@ -240,5 +244,22 @@ export class Context {
             this.betterHitTest(hitTestData, this.partialHitTestResult)) {
             this.partialHitTestResult = hitTestData;
         }
+    }
+
+    // Miscelaneous ----------------------
+    /**
+     * @param {string} label
+     * @return {number}
+     */
+    getTextWidth(label, fontSize = 12) {
+        return label.length * this.mWidth / 12 * fontSize;
+    }
+
+    resize() {
+        const divRect = this.parent.getBoundingClientRect();
+        this.width = divRect.width;
+        this.height = divRect.height;
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
     }
 }

@@ -36,8 +36,8 @@ export function run(ctx) {
                         input[p] = outputPort.value;
                     } 
                     else {
-                        if (typeInfo.ports[p].defaultValue) {
-                            input[p] = typeInfo.ports[p].defaultValue;
+                        if (typeInfo.ports[p].defaultValue !== undefined) {
+                            input[p] = port.value;
                         }
                         else {
                             readyToEvaluate = false;

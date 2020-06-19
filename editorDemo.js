@@ -16,5 +16,5 @@ function draw() {
     ctx.requestRedraw();
 }
 
-const ctx = new Context('editorDemo', w, h, () => draw(), 'nodes/');
+const ctx = new Context('editorDemo', () => draw(), 'nodes/');
 ctx.requestRedraw();

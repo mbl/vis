@@ -35,7 +35,11 @@ export class PortType {
      * @param {number} editor 
      */
     constructor(output, label, type, defaultValue, editor) {
-
+        this.output = output;
+        this.label = label;
+        this.type = type;
+        this.defaultValue = defaultValue;
+        this.editor = editor;
     }
 }
 
@@ -44,14 +48,12 @@ export class NodeType {
      * @param {string} type 
      * @param {string} title 
      * @param {number} color 
-     * @param {number} w 
      * @param {PortType[]} ports 
      */
-    constructor(type, title, color, w, ports) {
+    constructor(type, title, color, ports) {
         this.type = type;
         this.title = title;
         this.color = color;
-        this.w = w;
         this.ports = ports;
     }
 }
@@ -64,7 +66,6 @@ export const types = [
         type: 'number',
         title: 'Number',
         color: 0xffcce00e,
-        w: 100,
         ports: [
             {
                 output: 1,
@@ -79,7 +80,6 @@ export const types = [
     {
         type: 'displayNumber',
         title: 'Display',
-        w: 120,
         color: 0xffe0cc0e,
         preview: {
             height: 100,
@@ -118,7 +118,6 @@ export const types = [
     {
         type: 'plus',
         title: '+',
-        w: 55,
         color: 0xffcc4020,
         evaluate: (a, b) => {
             const l = Math.max(al(a), al(b));
@@ -156,7 +155,6 @@ export const types = [
     {
         type: 'minus',
         title: '-',
-        w: 55,
         color: 0xffff4020,
         evaluate: (a, b) => {
             const l = Math.max(al(a), al(b));
@@ -194,7 +192,6 @@ export const types = [
     {
         type: 'multiply',
         title: '*',
-        w: 55,
         color: 0xff2040ff,
         evaluate: (a, b) => {
             const l = Math.max(al(a), al(b));
@@ -213,13 +210,13 @@ export const types = [
                 output: 0,
                 label: 'a',
                 type: 'float32[]',
-                defaultValue: 0,
+                defaultValue: 1,
             },
             {
                 output: 0,
                 label: 'b',
                 type: 'float32[]',
-                defaultValue: 0,
+                defaultValue: 1,
             },
             {
                 output: 1,
@@ -232,7 +229,6 @@ export const types = [
     {
         type: 'divide',
         title: '/',
-        w: 55,
         color: 0xff2040ff,
         evaluate: (a, b) => {
             const l = Math.max(al(a), al(b));
@@ -257,7 +253,7 @@ export const types = [
                 output: 0,
                 label: 'b',
                 type: 'float32[]',
-                defaultValue: 0,
+                defaultValue: 1,
             },
             {
                 output: 1,
@@ -270,7 +266,6 @@ export const types = [
     {
         type: 'sigmoid',
         title: 'sigmoid',
-        w: 80,
         color: 0xff20ff20,
         evaluate: (a, b) => {
             const l = Math.max(al(a), al(b));
@@ -302,7 +297,6 @@ export const types = [
     {
         type: 'displayRectangles',
         title: 'Display Rectangles',
-        w: 220,
         color: 0xffe00ecc,
         preview: {
             height: 200,
@@ -343,40 +337,39 @@ export const types = [
                 output: 0,
                 label: 'x',
                 type: 'float32[]',
-                defaultValue: [],
+                defaultValue: 0,
             },
             {
                 output: 0,
                 label: 'y',
                 type: 'float32[]',
-                defaultValue: [],
+                defaultValue: 0,
             },
             {
                 output: 0,
                 label: 'w',
                 type: 'float32[]',
-                defaultValue: [],
+                defaultValue: 1,
             },
             {
                 output: 0,
                 label: 'h',
                 type: 'float32[]',
-                defaultValue: [],
+                defaultValue: 1,
             },
             {
                 output: 0,
                 label: 'color',
                 type: 'uint32[]',
-                defaultValue: [],
+                defaultValue: 0xffffffff,
             },
         ]
     },
 
     {
         type: 'random',
-        title: 'Random',
+        title: 'Rnd',
         color: 0xffffe00e,
-        w: 100,
         evaluate: (n) => {
             const ni = n | 0;
             const result = new Float32Array(ni);
@@ -401,6 +394,22 @@ export const types = [
                 editor: 0,
             }
         ]
+    },
+
+    {
+        type: 'chick',
+        title: 'Chick with a Hat',
+        color: 0xffffff00,
+        preview: {
+            height: 200,
+            /**
+             * @param {Context} ctx
+             */
+            draw: (node, ctx, x, y, w, h) => {
+                ctx.sprite(x, y, 'assets/chickhat.png');
+            }
+        },
+        ports: []
     },
 
 ];

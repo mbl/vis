@@ -5,6 +5,7 @@
 import { drawPort, Port } from "./ports.js";
 import { getType } from "./types.js";
 import { distancePointToRectangle } from "./tools/distance.js"; 
+import { moveTo } from "./tools/math.js";
 import { removeConnections } from "./connections.js";
 import { Context } from "./context.js";
 import { NodeType } from "./types.js";
@@ -22,7 +23,7 @@ export class Node {
         this.type = type;
         this.x = x;
         this.y = y;
-        this.w = type.w;
+        this.w = 0;
         this.h = 0;
         this.color = 0;
         this.ports = [];
@@ -53,7 +54,7 @@ export class Node {
         if (sourcePort) {
             return sourcePort.value;
         }
-        return undefined;
+        return port.value;
     }
 
     /**
@@ -109,28 +110,56 @@ export class Node {
             hot,
             this.type.title);
 
+        let nodeWidth = ctx.getTextWidth(this.type.title) + 20;
         let cy = y + titleHeight;
+        const portPad = 8;
+        const labelPad = portPad;
+        const editorPad = 2;
+        const portWidth = 10;
+        const editorWidth = 40;
         for (let portNum = 0; portNum < this.ports.length; portNum++) {
+            let cx = x;
             const port = this.ports[portNum];
             if (!port.type.output) {
                 // Input port
-                drawPort(ctx, port, x + 8, cy + 7, 0xffcce00e, !!port.connectedTo);
-                ctx.drawText(x + 25, cy, w - 25, portHeight, port.type.label);
+                cx += portPad;
+                drawPort(ctx, port, cx, cy + 7, 0xffcce00e, !!port.connectedTo);
+                cx += portWidth + portPad;
+                const textWidth = ctx.getTextWidth(port.type.label);
+                ctx.drawText(cx, cy, textWidth, portHeight, port.type.label);
+                cx += textWidth;
+                if (!port.connectedTo) {
+                    ctx.inputText(port, cx, cy, editorWidth, portHeight, port.type.type);
+                    cx += editorWidth;
+                    cx += editorPad;
+                }
             }
             else {
                 // Output port
-                drawPort(ctx, port, x + w - 22, cy + 7, 0xffcce00e, !!port.numConnections);
+                cx += labelPad;
                 // Display value if possible, also add editor
+                const textWidth = ctx.getTextWidth(port.type.label);
                 if (port.type.editor) {
-                    ctx.drawText(x + 8, cy, 40 - 8, portHeight, port.type.label);
-                    ctx.inputText(port, x + 40, cy, w - 40 - 25, portHeight, port.type.type);
+                    ctx.drawText(cx, cy, textWidth, portHeight, port.type.label);
+                    cx += textWidth;
+                    ctx.inputText(port, cx, cy, editorWidth, portHeight, port.type.type);
+                    cx += editorWidth;
                 }
                 else {
-                    ctx.drawText(x + 8, cy, w - 25, portHeight, port.type.label);
+                    ctx.drawText(cx, cy, textWidth, portHeight, port.type.label);
+                    cx += textWidth;
                 }
+                // Output port
+                drawPort(ctx, port, x + w - portWidth - portPad, cy + 7, 0xffcce00e, !!port.numConnections);
+                cx += portWidth + portPad * 2;
             }
             cy += portHeight;
+            nodeWidth = Math.max(nodeWidth, cx - x);
         }
+        if (this.w === 0) {
+            this.w = nodeWidth;
+        }        
+        this.w = moveTo(this.w, nodeWidth, 5);
 
         this.h = cy - y;
 

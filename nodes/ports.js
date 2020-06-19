@@ -1,6 +1,7 @@
 import { distancePointToRectangle } from './tools/distance.js';
 import { Context } from "./context.js";
 import { Node } from './nodes.js';
+import { PortType } from './types.js';
 
 export class Port {
     /**
@@ -16,7 +17,7 @@ export class Port {
         this.type = type;
         this.connectedTo = null; // For input
         this.numConnections = 0; // For output
-        this.value = null;
+        this.value = type.defaultValue;
     }
 }
 
@@ -29,10 +30,10 @@ export class Port {
  * @param {boolean} connected If true, display port as filled
  */
 export function drawPort(ctx, port, x, y, color, connected) {
-    port.x = x;
-    port.y = y;
     const w = 15;
     const h = 15;
+    port.x = x + w / 2;
+    port.y = y + 6;
     if(ctx.hitTestRect(x, y, w, h)) {
         ctx.recordHitTest('port', port, 
             distancePointToRectangle(ctx.mouse, x, y, w, h),

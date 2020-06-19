@@ -32,3 +32,6 @@ I am streaming my work at https://www.twitch.tv/mmbala .
 Besides just coding, I hope to find some like-minded devs that I can
 engage with and learn from.
 
+## Credits
+
+Chick with a Hat: https://suwalls.com/animals/chick-with-a-hat
