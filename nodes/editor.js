@@ -58,7 +58,7 @@ export function valueEditor(ctx, state, obj, x, y, w, h, type) {
         }
         state.editing.canvasInput.render();
         const stringValue = state.editing.canvasInput.value();
-        if (type === 'float32') {
+        if (type === 'float32' || type === 'float32[]') {
             obj.value = Number.parseFloat(stringValue);
         }
         else {

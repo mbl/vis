@@ -1,6 +1,7 @@
 import { Node } from './nodes.js';
 import { Port } from './ports.js';
 import { Context } from './context.js';
+import { lerp, bezier } from './tools/math.js';
 
 /**
  * 
@@ -148,6 +149,7 @@ export function connect(ctx, state) {
 
 /** 
  * Draws a single connection between two ports.
+ * @param {Context} ctx
  * @param {Port} portFrom
  * @param {Port} portTo
  */
@@ -158,11 +160,15 @@ export function drawConnection(ctx, portFrom, portTo) {
     // Weird heuristic attempting to make the result look good
     // TODO: still not optimal, improve!
     let dx = p2.x - p1.x; // Delta x
+    
     if (Math.abs(dx) < 1e-3) {
         dx = Math.sign(dx) * 1e-3;
     }
 
-    const h = 40; // "overhang" in pixels
+    let dy = Math.abs(p2.y - p1.y);
+    const h0 = Math.abs(dx) / 3.0; // Overhang if dy===0
+    const h100 = 40; // "overhang" in pixels if dy > 100
+    const h = lerp(h0, h100, Math.min(dy / 100.0, 1));
     const offsetA = Math.max(Math.min(dx / 2, h * 4), h * 2);
 
     // Experimental values that roughly approximate exact solution to compute overhang based on offset
@@ -175,13 +181,35 @@ export function drawConnection(ctx, portFrom, portTo) {
     const offsetB = Math.min(x1, x2);
     
     const offset = Math.max(offsetA, offsetB);
+
+    let color = 'white';
+    if (ctx.hitTestResult && ctx.hitTestResult.type === 'port') {
+        if(ctx.hitTestResult.obj === portTo) {
+            color = 'green';
+        } 
+        else if (ctx.hitTestResult.obj === portFrom) {
+            color = 'red';
+        }
+        if (color !== 'white') {
+            const t = (ctx.time % 1000) / 1000.0;
+
+            const point = bezier(
+                t,
+                p1, 
+                { x: p1.x + offset, y: p1.y }, 
+                { x: p2.x - offset, y: p2.y },
+                p2);
+
+            ctx.drawRect(point.x - 3, point.y - 3, 7, 7, color);
+        }
+    }
     
     ctx.drawBezier(
         p1.x, p1.y,
         p1.x + offset, p1.y,
         p2.x - offset, p2.y,
         p2.x, p2.y,
-        'white',
+        color,
         3
     );
 }

@@ -301,6 +301,7 @@ export const types = [
         preview: {
             height: 200,
             /**
+             * @param {Node} node
              * @param {Context} ctx
              */
             draw: (node, ctx, x, y, w, h) => {
@@ -327,7 +328,7 @@ export const types = [
                         const hv = gv(ha, i);
                         const cv = gv(ca, i);
 
-                        ctx.drawRect(x + xv * w, y + yv * h, wv * w, hv * h, cv);
+                        ctx.drawRect(x + w / 2 + xv * w, y + h / 2 + yv * h, wv * w, hv * h, cv);
                     }
                 }
             }
@@ -410,6 +411,80 @@ export const types = [
             }
         },
         ports: []
+    },
+
+    {
+        type: 'rotate',
+        title: 'Rot',
+        color: 0xffffff00,
+        evaluate: (x, y, angle) => {
+            const sa = Math.sin(angle);
+            const ca = Math.cos(angle);
+            const l = Math.max(al(x), al(y));
+
+            const resultX = new Float32Array(l);
+            const resultY = new Float32Array(l);
+
+            for (let i = 0; i < l; i++) {
+                const xv = gv(x, i);
+                const yv = gv(y, i);
+                resultX[i] = ca * xv - sa * yv;
+                resultY[i] = sa * xv + ca * yv;
+            }
+
+            return [resultX, resultY];
+        },
+        ports: [
+            {
+                output: 0,
+                label: 'x',
+                type: 'float32[]',
+                defaultValue: 0,
+            },
+            {
+                output: 0,
+                label: 'y',
+                type: 'float32[]',
+                defaultValue: 0,
+            },
+            {
+                output: 0,
+                label: 'a',
+                type: 'float32',
+                defaultValue: 0,
+            },
+            {
+                output: 1,
+                label: 'xr',
+                type: 'float32[]',
+                editor: 0,
+            },
+            {
+                output: 1,
+                label: 'yr',
+                type: 'float32[]',
+                editor: 0,
+            },
+        ]
+    },
+
+    {
+        type: 'time',
+        title: 'Time',
+        color: 0xffffffff,
+        evaluate: () => {
+            // TODO: give evaluate access to the context
+            return [Date.now()];
+        },
+        ports: [
+            {
+                output: 1,
+                label: 'time',
+                type: 'float32',
+                defaultValue: 0,
+                editor: 1,
+            }
+        ]
     },
 
 ];

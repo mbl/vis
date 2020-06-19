@@ -37,8 +37,6 @@ export class Node {
      * @param {string} label 
      */
     findPortByLabel(label) {
-        const typeInfo = this.type;
-    
         for (let p = 0; p < this.ports.length; p++) {
             const port = this.ports[p];
             if(port.type.label === label) {

@@ -99,6 +99,7 @@ export class Context {
 
     clip(x, y, w, h) {
         this.ctx.save();
+        this.ctx.beginPath();
         this.ctx.rect(x, y, w, h);
         this.ctx.clip();
     }
@@ -157,12 +158,11 @@ export class Context {
         this.ctx.font = `${fontSize}px Arial`;
         this.ctx.fillStyle = color;
         this.ctx.textBaseline = 'middle';
-        this.ctx.rect(x, y, w, h);
-        this.ctx.save();
+        this.clip(x, y, w, h);
         this.ctx.clip();
         // this.drawRect(x, y, w, h, 'rgba(0, 255, 0, 0.1)');
         this.ctx.fillText(text, x, y + h / 2);
-        this.ctx.restore();
+        this.unclip();
     }
 
     drawBezier(x1, y1, x2, y2, x3, y3, x4, y4, color, lineWidth = 1) {
