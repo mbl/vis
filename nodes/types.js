@@ -27,17 +27,33 @@ function gv(a, i) {
     return ArrayBuffer.isView(a) ? a[i % a.length] : a;
 }
 
+function input(name, type, defaultValue=null, label=name) {
+    if (type === 'float32' && defaultValue===null) {
+        defaultValue = 0.0;
+    }
+    if (type === 'float32[]' && defaultValue===null) {
+        defaultValue = [0.0];
+    }
+    return new PortType(0, label, name, type, defaultValue, 0);
+}
+
+function output(name, type, label=name, editor=0) {
+    return new PortType(1, label, name, type, null, editor);
+}
+
 export class PortType {
     /**
-     * @param {number} output 
-     * @param {string} label 
-     * @param {string} type 
-     * @param {any} defaultValue 
-     * @param {number} editor 
+     * @param {number} output When falsey, this is input port, otherwise output.
+     * @param {string} label Label to show the user 
+     * @param {string} name Internal name of the port for code purposes
+     * @param {string} type Type of the parameter (like float32 or float32[])
+     * @param {any} defaultValue Default value to use if input port not connected.
+     * @param {number} editor TODO: remove, obsolete
      */
-    constructor(output, label, type, defaultValue, editor) {
+    constructor(output, label, name, type, defaultValue, editor) {
         this.output = output;
         this.label = label;
+        this.name = name;
         this.type = type;
         this.defaultValue = defaultValue;
         this.editor = editor;
@@ -68,13 +84,7 @@ export const types = [
         title: 'Number',
         color: 0xffcce00e,
         ports: [
-            {
-                output: 1,
-                label: 'value',
-                type: 'float32',
-                defaultValue: 0,
-                editor: 1,
-            }
+            output('value',  'float32', 'value', 1),
         ]
     },
 
@@ -110,12 +120,7 @@ export const types = [
             }
         },
         ports: [
-            {
-                output: 0,
-                label: 'value',
-                type: 'float32',
-                defaultValue: 0,
-            }
+            input('value', 'float32', 0)
         ]
     },
 
@@ -123,7 +128,8 @@ export const types = [
         type: 'plus',
         title: '+',
         color: 0xffcc4020,
-        evaluate: (a, b) => {
+        source: 'c = a + b;', // Turn this
+        evaluate: (a, b) => { // Into this
             const l = Math.max(al(a), al(b));
 
             const result = new Float32Array(l);
@@ -136,23 +142,9 @@ export const types = [
             return ra(result);
         },
         ports: [
-            {
-                output: 0,
-                label: 'a',
-                type: 'float32[]',
-                defaultValue: 0,
-            },
-            {
-                output: 0,
-                label: 'b',
-                type: 'float32[]',
-                defaultValue: 0,
-            },
-            {
-                output: 1,
-                label: 'a+b',
-                type: 'float32[]',
-            }
+            input('a', 'float32[]', 0),
+            input('b', 'float32[]', 0),
+            output('c', 'float32[]', 'a+b'),
         ]
     },
 
@@ -173,23 +165,9 @@ export const types = [
             return ra(result);
         },
         ports: [
-            {
-                output: 0,
-                label: 'a',
-                type: 'float32[]',
-                defaultValue: 0,
-            },
-            {
-                output: 0,
-                label: 'b',
-                type: 'float32[]',
-                defaultValue: 0,
-            },
-            {
-                output: 1,
-                label: 'a-b',
-                type: 'float32[]',
-            }
+            input('a', 'float32[]', 0),
+            input('b', 'float32[]', 0),
+            output('c', 'float32[]', 'a-b'),
         ]
     },
 
@@ -210,23 +188,9 @@ export const types = [
             return ra(result);
         },
         ports: [
-            {
-                output: 0,
-                label: 'a',
-                type: 'float32[]',
-                defaultValue: 1,
-            },
-            {
-                output: 0,
-                label: 'b',
-                type: 'float32[]',
-                defaultValue: 1,
-            },
-            {
-                output: 1,
-                label: 'a*b',
-                type: 'float32[]',
-            }
+            input('a', 'float32[]', 1),
+            input('b', 'float32[]', 1),
+            output('c', 'float32[]', 'a*b'),
         ]
     },
 
@@ -247,23 +211,9 @@ export const types = [
             return ra(result);
         },
         ports: [
-            {
-                output: 0,
-                label: 'a',
-                type: 'float32[]',
-                defaultValue: 0,
-            },
-            {
-                output: 0,
-                label: 'b',
-                type: 'float32[]',
-                defaultValue: 1,
-            },
-            {
-                output: 1,
-                label: 'a/b',
-                type: 'float32[]',
-            }
+            input('a', 'float32[]', 0),
+            input('b', 'float32[]', 1),
+            output('c', 'float32[]', 'a/b'),
         ]
     },
 
@@ -284,17 +234,8 @@ export const types = [
             return ra(result);
         },
         ports: [
-            {
-                output: 0,
-                label: 'a',
-                type: 'float32[]',
-                defaultValue: 0,
-            },
-            {
-                output: 1,
-                label: 'sigmoid',
-                type: 'float32[]',
-            }
+            input('a', 'float32[]', 0),
+            output('sigmoid', 'float32[]')
         ]
     },
 
@@ -338,36 +279,11 @@ export const types = [
             }
         },
         ports: [
-            {
-                output: 0,
-                label: 'x',
-                type: 'float32[]',
-                defaultValue: 0,
-            },
-            {
-                output: 0,
-                label: 'y',
-                type: 'float32[]',
-                defaultValue: 0,
-            },
-            {
-                output: 0,
-                label: 'w',
-                type: 'float32[]',
-                defaultValue: 1,
-            },
-            {
-                output: 0,
-                label: 'h',
-                type: 'float32[]',
-                defaultValue: 1,
-            },
-            {
-                output: 0,
-                label: 'color',
-                type: 'uint32[]',
-                defaultValue: 0xffffffff,
-            },
+            input('x', 'float32[]', 0),
+            input('y', 'float32[]', 0),
+            input('w', 'float32[]', 1),
+            input('h', 'float32[]', 1),
+            input('color', 'uint32[]', 0xffffffff),
         ]
     },
 
@@ -386,27 +302,9 @@ export const types = [
             return [result];
         },
         ports: [
-            {
-                output: 0,
-                label: 'n',
-                type: 'uint32',
-                defaultValue: 1,
-                editor: 0,
-            },
-            {
-                output: 0,
-                label: 'seed',
-                type: 'uint32',
-                defaultValue: 0,
-                editor: 0,
-            },
-            {
-                output: 1,
-                label: 'value',
-                type: 'float32[]',
-                defaultValue: [],
-                editor: 0,
-            }
+            input('n', 'uint32', 1),
+            input('seed', 'uint32', 0),
+            output('value', 'float32[]')
         ]
     },
 
@@ -442,7 +340,6 @@ export const types = [
         ports: []
     },
 
-
     {
         type: 'rotate',
         title: 'Rot',
@@ -465,36 +362,11 @@ export const types = [
             return [resultX, resultY];
         },
         ports: [
-            {
-                output: 0,
-                label: 'x',
-                type: 'float32[]',
-                defaultValue: 0,
-            },
-            {
-                output: 0,
-                label: 'y',
-                type: 'float32[]',
-                defaultValue: 0,
-            },
-            {
-                output: 0,
-                label: 'a',
-                type: 'float32',
-                defaultValue: 0,
-            },
-            {
-                output: 1,
-                label: 'xr',
-                type: 'float32[]',
-                editor: 0,
-            },
-            {
-                output: 1,
-                label: 'yr',
-                type: 'float32[]',
-                editor: 0,
-            },
+            input('x', 'float32[]', 0),
+            input('y', 'float32[]', 0),
+            input('a', 'float32', 0),
+            output('xr', 'float32[]'),
+            output('yr', 'float32[]'),
         ]
     },
 
@@ -507,13 +379,7 @@ export const types = [
             return [this.time];
         },
         ports: [
-            {
-                output: 1,
-                label: 'time',
-                type: 'float32',
-                defaultValue: 0,
-                editor: 0,
-            }
+            output('time', 'float32')
         ]
     },
 
