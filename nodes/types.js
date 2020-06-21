@@ -1,6 +1,7 @@
 import { Node } from "./nodes.js";
 import { Context } from "./context.js";
 import { xoshiro128ss } from "./tools/math.js";
+import { compile } from "./compiler.js";
 
 /**
  * Array Length.
@@ -128,8 +129,8 @@ export const types = [
         type: 'plus',
         title: '+',
         color: 0xffcc4020,
-        source: 'c = a + b;', // Turn this
-        evaluate: (a, b) => { // Into this
+        source: 'c = a + b;',
+        evaluate: (a, b) => {
             const l = Math.max(al(a), al(b));
 
             const result = new Float32Array(l);
@@ -393,3 +394,16 @@ export const types = [
 export function getType(type) {
     return types.find((x) => x.type === type);
 }
+
+/**
+ * Patch the types in place
+ */
+function patchTypes(types) {
+    types.forEach((t) => {
+        if (t.source) {
+            t.evaluate = compile(t.source, t.ports);
+        }
+    });
+}
+
+// patchTypes(types);
