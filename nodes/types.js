@@ -1,5 +1,6 @@
 import { Node } from "./nodes.js";
 import { Context } from "./context.js";
+import { xoshiro128ss } from "./tools/math.js";
 
 /**
  * Array Length.
@@ -85,6 +86,7 @@ export const types = [
             height: 100,
             /**
              * @param {Node} node
+             * @param {Context} ctx
              */
             draw: (node, ctx, x, y, w, h) => {
                 let number = node.getPortValue('value');
@@ -101,7 +103,9 @@ export const types = [
                     if (number === undefined) {
                         number = '?';
                     }
-                    ctx.drawText(x, y, w, h, number.toString(), 'red', 48);
+                    const numStr = number.toString();
+                    const tw = ctx.getTextWidth(numStr, 1);
+                    ctx.drawText(x, y, w, h, numStr, 'red', Math.trunc(100 / tw));
                 }
             }
         },
@@ -371,11 +375,13 @@ export const types = [
         type: 'random',
         title: 'Rnd',
         color: 0xffffe00e,
-        evaluate: (n) => {
+        evaluate: (n, seed) => {
             const ni = n | 0;
+            const s = seed | 0;
+            const rnd = xoshiro128ss(s, s*13+7, s*1021+49, s*3+1);
             const result = new Float32Array(ni);
             for (let i = 0; i < ni; i++) {
-                result[i] = Math.random();
+                result[i] = rnd();
             }
             return [result];
         },
@@ -385,6 +391,13 @@ export const types = [
                 label: 'n',
                 type: 'uint32',
                 defaultValue: 1,
+                editor: 0,
+            },
+            {
+                output: 0,
+                label: 'seed',
+                type: 'uint32',
+                defaultValue: 0,
                 editor: 0,
             },
             {
@@ -412,6 +425,23 @@ export const types = [
         },
         ports: []
     },
+
+    {
+        type: 'owlbaby',
+        title: 'Rescue Baby Owl',
+        color: 0xffffdd55,
+        preview: {
+            height: 200,
+            /**
+             * @param {Context} ctx
+             */
+            draw: (node, ctx, x, y, w, h) => {
+                ctx.sprite(x, y, 'assets/owlbaby.png');
+            }
+        },
+        ports: []
+    },
+
 
     {
         type: 'rotate',
@@ -472,9 +502,9 @@ export const types = [
         type: 'time',
         title: 'Time',
         color: 0xffffffff,
-        evaluate: () => {
+        evaluate() {
             // TODO: give evaluate access to the context
-            return [Date.now()];
+            return [this.time];
         },
         ports: [
             {
@@ -482,7 +512,7 @@ export const types = [
                 label: 'time',
                 type: 'float32',
                 defaultValue: 0,
-                editor: 1,
+                editor: 0,
             }
         ]
     },

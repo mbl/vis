@@ -42,7 +42,8 @@ export class Context {
         this.hitTestMaxDistance = 5;
 
         // Other data
-        this.time = Date.now();
+        this.startTime = Date.now();
+        this.time = 0;
         // Width of a capital M
         ctx.font = '12px Arial';
         this.mWidth = ctx.measureText('M').width;
@@ -196,7 +197,7 @@ export class Context {
             this.redrawRequested = true;
             requestAnimationFrame(() => { 
                 this.redrawRequested = false;
-                this.time = Date.now();
+                this.time = Date.now() - this.startTime;
                 this.draw();
             });
         }

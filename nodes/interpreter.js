@@ -1,8 +1,10 @@
 import { nodes } from "./nodes.js";
 import { types } from "./types.js";
+import { Context } from "./context.js";
 
 /**
  * Run the interpreter until all possible nodes are evaluated.
+ * @param {Context} ctx
  */
 export function run(ctx) {
     const evaluated = new Array(nodes.length);
@@ -49,7 +51,7 @@ export function run(ctx) {
 
             if (readyToEvaluate) {
                 if (typeInfo.evaluate) {
-                    const result = typeInfo.evaluate.apply(null, input);
+                    const result = typeInfo.evaluate.apply(ctx, input);
                     let outputNum = 0;
                     for (let i=0; i<node.ports.length; i++) {
                         const port = node.ports[i];

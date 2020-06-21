@@ -22,7 +22,7 @@ export function valueEditor(ctx, state, obj, x, y, w, h, type) {
         );
     }
     
-    const valueString = obj.value.toString();
+    const valueString = obj.value !== null ? obj.value.toString() : 'null';
 
     if (ctx.hitTestResult && ctx.hitTestResult.type === 'editor' && ctx.hitTestResult.obj === obj) {
         ctx.drawRect(x, y, w, h, 'rgba(255, 255, 255, 0.1)');
