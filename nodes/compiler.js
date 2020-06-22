@@ -24,20 +24,20 @@ export function compile(source, ports) {
 //     return ra(result);
 // },
 
-    let sourceCode = functionPrefix(ports);
-
+    let sourceCode = '';
     if (vectorizationNeeded(ports)) {
         sourceCode += vectorizationPrefix(ports);
+        sourceCode += '// Original code\n';
         sourceCode += source + '\n';
         sourceCode += vectorizationSuffix(ports);
     }
     else {
+        sourceCode += simplePrefix(ports);
+        sourceCode += '// Original code\n';
         sourceCode += source + '\n';
-        sourceCode += returnSuffix(ports);
+        sourceCode += simpleSuffix(ports);
     }
 
-    console.log(sourceCode);
-    // debugger;
     return new Function(sourceCode);
 }
 
@@ -49,8 +49,8 @@ function vectorizationNeeded(ports) {
     return !!ports.find(p => p.type.endsWith('[]'));
 }
 
-function functionPrefix(ports) {
-    let result = '// Function prefix\n';    
+function simplePrefix(ports) {
+    let result = '// Function prefix\n';
     ports.forEach((p, i) => {
         if (!p.output) {
             result += `const ${p.name} = arguments[${i}];\n`;
@@ -59,22 +59,81 @@ function functionPrefix(ports) {
     return result;
 }
 
+function simpleSuffix(ports) {
+    let result = '// Return suffix\n';
+    
+    result += `return [`;
+
+    ports.forEach((p) => {
+        if (p.output) {
+            result += `${p.name}, `;
+        }
+    });
+
+    result += `];`;
+
+    return result;
+}
+
+/**
+ * @param {PortType[]} ports
+ */
 function vectorizationPrefix(ports) {
-//     const l = Math.max(al(a), al(b));
-//     const result = new Float32Array(l);
-//     for (let i = 0; i < l; i++) {
-//         const av = gv(a, i);
-//         const bv = gv(b, i);
     let result = '// Vectorization prefix\n';
+
+    ports.forEach((p, i) => {
+        if (!p.output) {
+            result += `const _${p.name} = ArrayBuffer.isView(arguments[${i}]) ? arguments[${i}] : [arguments[${i}]];\n`;
+        }
+    });
+
+    result += 'const _l = Math.max(';
+    ports.forEach((p) => {
+        if (!p.output) {
+            const variableName = `_${p.name}`;
+            result += `${variableName}.length, `;
+        }
+    });
+    result += '1);\n';  // TODO improve
+
+    ports.forEach((p) => {
+        if (p.output) {
+            result += `const _${p.name} = new Float32Array(_l);\n`;
+        }
+    });
+
+    result += `for (let __i = 0; __i < _l; __i++) {\n`;
+
+    ports.forEach((p) => {
+        if (!p.output) {
+            const variableName = `_${p.name}`;
+            result += `\tconst ${p.name} = ${variableName}[__i % ${variableName}.length];\n`;
+        }
+    });
+
     return result;
 }
 
 function vectorizationSuffix(ports) {
-    let result = '// Vectorization suffix\n';
-    return result;
-}
+    let result = '\t// Vectorization suffix\n';
 
-function returnSuffix(ports) {
-    let result = '// Return suffix\n';
+    ports.forEach((p) => {
+        if (p.output) {
+            result += `\t_${p.name}[__i] = ${p.name};\n`;
+        }
+    });
+
+    result += '}\n';
+
+    result += `return [`;
+
+    ports.forEach((p) => {
+        if (p.output) {
+            result += `_l === 1 ? _${p.name}[0] : _${p.name}, `;
+        }
+    });
+
+    result += `];`;
+
     return result;
 }

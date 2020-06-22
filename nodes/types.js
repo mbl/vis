@@ -130,18 +130,6 @@ export const types = [
         title: '+',
         color: 0xffcc4020,
         source: 'c = a + b;',
-        evaluate: (a, b) => {
-            const l = Math.max(al(a), al(b));
-
-            const result = new Float32Array(l);
-
-            for (let i = 0; i < l; i++) {
-                const av = gv(a, i);
-                const bv = gv(b, i);
-                result[i] = av + bv;
-            }
-            return ra(result);
-        },
         ports: [
             input('a', 'float32[]', 0),
             input('b', 'float32[]', 0),
@@ -153,18 +141,7 @@ export const types = [
         type: 'minus',
         title: '-',
         color: 0xffff4020,
-        evaluate: (a, b) => {
-            const l = Math.max(al(a), al(b));
-
-            const result = new Float32Array(l);
-
-            for (let i = 0; i < l; i++) {
-                const av = gv(a, i);
-                const bv = gv(b, i);
-                result[i] = av - bv;
-            }
-            return ra(result);
-        },
+        source: 'c = a - b;',
         ports: [
             input('a', 'float32[]', 0),
             input('b', 'float32[]', 0),
@@ -176,18 +153,7 @@ export const types = [
         type: 'multiply',
         title: '*',
         color: 0xff2040ff,
-        evaluate: (a, b) => {
-            const l = Math.max(al(a), al(b));
-
-            const result = new Float32Array(l);
-
-            for (let i = 0; i < l; i++) {
-                const av = gv(a, i);
-                const bv = gv(b, i);
-                result[i] = av * bv;
-            }
-            return ra(result);
-        },
+        source: 'c = a * b;',
         ports: [
             input('a', 'float32[]', 1),
             input('b', 'float32[]', 1),
@@ -199,18 +165,7 @@ export const types = [
         type: 'divide',
         title: '/',
         color: 0xff2040ff,
-        evaluate: (a, b) => {
-            const l = Math.max(al(a), al(b));
-
-            const result = new Float32Array(l);
-
-            for (let i = 0; i < l; i++) {
-                const av = gv(a, i);
-                const bv = gv(b, i);
-                result[i] = av / bv;
-            }
-            return ra(result);
-        },
+        source: 'c = a / b;',
         ports: [
             input('a', 'float32[]', 0),
             input('b', 'float32[]', 1),
@@ -222,18 +177,7 @@ export const types = [
         type: 'sigmoid',
         title: 'sigmoid',
         color: 0xff20ff20,
-        evaluate: (a, b) => {
-            const l = Math.max(al(a), al(b));
-
-            const result = new Float32Array(l);
-
-            for (let i = 0; i < l; i++) {
-                const av = gv(a, i);
-                const ex = Math.exp(av);
-                result[i] = ex / (ex + 1);
-            }
-            return ra(result);
-        },
+        source: 'sigmoid = 1 / (1 + Math.exp(-a));',
         ports: [
             input('a', 'float32[]', 0),
             output('sigmoid', 'float32[]')
@@ -292,6 +236,7 @@ export const types = [
         type: 'random',
         title: 'Rnd',
         color: 0xffffe00e,
+        // TODO: How to compile these type of functions
         evaluate: (n, seed) => {
             const ni = n | 0;
             const s = seed | 0;
@@ -345,23 +290,14 @@ export const types = [
         type: 'rotate',
         title: 'Rot',
         color: 0xffffff00,
-        evaluate: (x, y, angle) => {
-            const sa = Math.sin(angle);
-            const ca = Math.cos(angle);
-            const l = Math.max(al(x), al(y));
-
-            const resultX = new Float32Array(l);
-            const resultY = new Float32Array(l);
-
-            for (let i = 0; i < l; i++) {
-                const xv = gv(x, i);
-                const yv = gv(y, i);
-                resultX[i] = ca * xv - sa * yv;
-                resultY[i] = sa * xv + ca * yv;
-            }
-
-            return [resultX, resultY];
-        },
+        // TODO how to split vectorized part from static initialization
+        source: `
+            const sa = Math.sin(a);
+            const ca = Math.cos(a);
+            // vectorize(x, y, xr, yr)
+            xr = ca * x - sa * y;
+            yr = sa * x + ca * y;
+        `,
         ports: [
             input('x', 'float32[]', 0),
             input('y', 'float32[]', 0),
@@ -406,4 +342,4 @@ function patchTypes(types) {
     });
 }
 
-// patchTypes(types);
+patchTypes(types);
