@@ -1,28 +1,31 @@
-import { PortType } from "./types.js";
+import { NodeType, PortType } from "./types.js";
 
 /**
- * @param {string} source JavaScript code that performs the calculation.
- * A node with input ports a and b and output port c will define
- * variables a, b, c where a, b will be initialized to the input,
- * and assigning to c will result in returning the value as output.
- * @param {PortType[]} ports Definition of input/output ports
+ * @param {NodeType} nodeType
  */
-export function compile(source, ports) {
+export async function compile(nodeType) {
     let sourceCode = '';
+    const source = nodeType.source;
+    const ports = nodeType.ports;
     if (vectorizationNeeded(ports)) {
-        sourceCode += vectorizationPrefix(ports);
+        sourceCode += vectorizationPrefix(nodeType);
         sourceCode += '// Original code\n';
         sourceCode += source + '\n';
-        sourceCode += vectorizationSuffix(ports);
+        sourceCode += vectorizationSuffix(nodeType);
     }
     else {
-        sourceCode += simplePrefix(ports);
+        sourceCode += simplePrefix(nodeType);
         sourceCode += '// Original code\n';
         sourceCode += source + '\n';
-        sourceCode += simpleSuffix(ports);
+        sourceCode += simpleSuffix(nodeType);
     }
 
-    return new Function(sourceCode);
+    const sourceBlob = new Blob([sourceCode], { type: 'text/javascript' });
+    // TODO - store this URL for future unloading
+    const blobUrl = URL.createObjectURL(sourceBlob);
+    const module = await import(blobUrl);
+    const f = module[nodeType.type];
+    return f;
 }
 
 /**
@@ -33,17 +36,20 @@ function vectorizationNeeded(ports) {
     return !!ports.find(p => p.type.endsWith('[]'));
 }
 
-function simplePrefix(ports) {
+/**
+ * @param {NodeType} nodeType
+ */
+function simplePrefix(nodeType) {
+    const ports = nodeType.ports;
     let result = '// Function prefix\n';
-    ports.forEach((p, i) => {
-        if (!p.output) {
-            result += `const ${p.name} = arguments[${i}];\n`;
-        }
-    });
+    result += `export function ${nodeType.type}(`;
+    result += ports.filter(p => !p.output).map(p => p.name).join(', ');
+    result += ') {'
     return result;
 }
 
-function simpleSuffix(ports) {
+function simpleSuffix(nodeType) {
+    const ports = nodeType.ports;
     let result = '// Return suffix\n';
     
     result += `return [`;
@@ -54,20 +60,28 @@ function simpleSuffix(ports) {
         }
     });
 
-    result += `];`;
+    result += `];\n}`;
 
     return result;
 }
 
 /**
- * @param {PortType[]} ports
+ * @param {NodeType} nodeType
  */
-function vectorizationPrefix(ports) {
+function vectorizationPrefix(nodeType) {
+    const ports = nodeType.ports;
     let result = '// Vectorization prefix\n';
+
+    result += `export function ${nodeType.type}(`;
+    result += ports.filter(p => !p.output).map(p => p.name).join(', ');
+    result += ') {\n';
 
     ports.forEach((p, i) => {
         if (!p.output) {
-            result += `const _${p.name} = ArrayBuffer.isView(arguments[${i}]) ? arguments[${i}] : [arguments[${i}]];\n`;
+            result += `const _${p.name} = ArrayBuffer.isView(${p.name}) ? ${p.name} : [${p.name}];\n`;
+        }
+        else {
+            result += `let ${p.name};\n`
         }
     });
 
@@ -98,7 +112,8 @@ function vectorizationPrefix(ports) {
     return result;
 }
 
-function vectorizationSuffix(ports) {
+function vectorizationSuffix(nodeType) {
+    const ports = nodeType.ports;
     let result = '\t// Vectorization suffix\n';
 
     ports.forEach((p) => {
@@ -117,7 +132,7 @@ function vectorizationSuffix(ports) {
         }
     });
 
-    result += `];`;
+    result += `];\n}`;
 
     return result;
 }

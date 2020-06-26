@@ -66,12 +66,14 @@ export class NodeType {
      * @param {string} type 
      * @param {string} title 
      * @param {number} color 
+     * @param {string} source
      * @param {PortType[]} ports 
      */
-    constructor(type, title, color, ports) {
+    constructor(type, title, color, source, ports) {
         this.type = type;
         this.title = title;
         this.color = color;
+        this.source = source;
         this.ports = ports;
     }
 }
@@ -348,12 +350,12 @@ export function getType(type) {
 /**
  * Patch the types in place
  */
-function patchTypes(types) {
-    types.forEach((t) => {
+async function patchTypes(types) {
+    types.forEach(async (t) => {
         if (t.source) {
-            t.evaluate = compile(t.source, t.ports);
+            t.evaluate = await compile(t);
         }
     });
 }
 
-patchTypes(types);
+(async () => await patchTypes(types))();
