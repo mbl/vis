@@ -8,22 +8,6 @@ import { PortType } from "./types.js";
  * @param {PortType[]} ports Definition of input/output ports
  */
 export function compile(source, ports) {
-// TODO: Turn
-//         source: 'c = a + b;',
-
-// Into:
-
-// evaluate: (a, b) => {
-//     const l = Math.max(al(a), al(b));
-//     const result = new Float32Array(l);
-//     for (let i = 0; i < l; i++) {
-//         const av = gv(a, i);
-//         const bv = gv(b, i);
-//         result[i] = av + bv;
-//     }
-//     return ra(result);
-// },
-
     let sourceCode = '';
     if (vectorizationNeeded(ports)) {
         sourceCode += vectorizationPrefix(ports);
