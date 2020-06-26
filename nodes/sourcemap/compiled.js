@@ -1,0 +1,8 @@
+export function Add(A, B) {
+let C = A + B;
+debugger;
+return C;
+}
+
+// console.log(Add(1, 2));
+//# sourceMappingURL=data:text/javascript;base64,ewogICAgInZlcnNpb24iIDogMywKICAgICJmaWxlIjogImNvbXBpbGVkLmpzIiwKICAgICJzb3VyY2VSb290IjogIiIsCiAgICAic291cmNlcyI6IFsiaHR0cDovL21iYWxhL3NvdXJjZS5qcyJdLAogICAgInNvdXJjZXNDb250ZW50IjogWyJmdW5jdGlvbiBhZGQoYSwgYikge1xubGV0IEMgPSBBICsgQjtcbmRlYnVnZ2VyO1xucmV0dXJuIGM7XG59IiwgIkM9QStCOyJdLAogICAgIm5hbWVzIjogWyJDIiwgIkEiLCAiQiJdLAogICAgIm1hcHBpbmdzIjogIkFBQUE7QUFDQTtBQUNBO0FBQ0E7QUFDQTs7OyIKfQo=

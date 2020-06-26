@@ -1,0 +1,9 @@
+{
+    "version" : 3,
+    "file": "compiled.js",
+    "sourceRoot": "",
+    "sources": ["http://mbala/source.js"],
+    "sourcesContent": ["function add(a, b) {\nlet C = A + B;\ndebugger;\nreturn c;\n}", "C=A+B;"],
+    "names": ["C", "A", "B"],
+    "mappings": "AAAA;AACA;AACA;AACA;AACA;;;"
+}
