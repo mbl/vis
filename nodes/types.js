@@ -172,6 +172,16 @@ export const types = [
             output('c', 'float32[]', 'a/b'),
         ]
     },
+    {
+        type: 'round',
+        title: 'round',
+        color: 0xffaabbcc,
+        source: 'i = Math.round(a);',
+        ports: [
+            input('a', 'float32[]', 0),
+            output('i', 'float32[]', 'round(a)'),
+        ]
+    },
 
     {
         type: 'sigmoid',
@@ -241,6 +251,10 @@ export const types = [
             const ni = n | 0;
             const s = seed | 0;
             const rnd = xoshiro128ss(s, s*13+7, s*1021+49, s*3+1);
+            rnd();
+            rnd();
+            rnd();
+            rnd();
             const result = new Float32Array(ni);
             for (let i = 0; i < ni; i++) {
                 result[i] = rnd();
