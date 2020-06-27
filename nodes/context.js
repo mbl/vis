@@ -158,6 +158,7 @@ export class Context {
         this.ctx.font = `${fontSize}px ${this.font}`;
         this.ctx.fillStyle = color;
         this.ctx.textBaseline = 'middle';
+
         this.clip(x, y, w, h);
         this.ctx.clip();
         // this.drawRect(x, y, w, h, 'rgba(0, 255, 0, 0.1)');
@@ -170,8 +171,13 @@ export class Context {
         this.ctx.strokeStyle = color;
         
         this.ctx.beginPath();
+        // this.ctx.moveTo(x1, y1);
+        // this.ctx.bezierCurveTo(x2, y2, x3, y3, x4, y4);
+
+        const c = 0.53;
         this.ctx.moveTo(x1, y1);
-        this.ctx.bezierCurveTo(x2, y2, x3, y3, x4, y4);
+        this.ctx.quadraticCurveTo(x1 + (x2 - x1) * c, y1 + (y2 - y1) * c, (x2 + x3) / 2, (y2 + y3) / 2);
+        this.ctx.quadraticCurveTo(x4 + (x3 - x4) * c, y4 + (y3 - y4) * c, x4, y4);
         this.ctx.stroke();
     }
 
