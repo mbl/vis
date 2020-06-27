@@ -1,31 +1,50 @@
 import { NodeType, PortType } from "./types.js";
+import { SourceMap } from "./sourcemap.js";
 
 /**
- * @param {NodeType} nodeType
+ * Turn the node's source code into 
+ * vectorized javascript source code.
+ * 
+ * @param {NodeType} nodeType 
+ * @param {SourceMap} sourceMap
+ * @returns {string} Vectorized javascript code
  */
-export async function compile(nodeType) {
+export function compileType(nodeType, sourceMap) {
     let sourceCode = '';
     const source = nodeType.source;
     const ports = nodeType.ports;
     if (vectorizationNeeded(ports)) {
-        sourceCode += vectorizationPrefix(nodeType);
-        sourceCode += '// Original code\n';
-        sourceCode += source + '\n';
-        sourceCode += vectorizationSuffix(nodeType);
+        sourceCode += sourceMap.skipChunk(vectorizationPrefix(nodeType) + '\t\t// Original code -----\n');
+        sourceCode += sourceMap.appendChunk(`${nodeType.type}.js`, source + '\n');
+        sourceCode += sourceMap.skipChunk(vectorizationSuffix(nodeType));
     }
     else {
-        sourceCode += simplePrefix(nodeType);
-        sourceCode += '// Original code\n';
-        sourceCode += source + '\n';
-        sourceCode += simpleSuffix(nodeType);
+        sourceCode += sourceMap.skipChunk(simplePrefix(nodeType) + '\t// Original code -----\n');
+        sourceCode += sourceMap.appendChunk(`${nodeType.type}.js`, source + '\n');
+        sourceCode += sourceMap.skipChunk(simpleSuffix(nodeType));
     }
+    return sourceCode;
+}
 
-    const sourceBlob = new Blob([sourceCode], { type: 'text/javascript' });
-    // TODO - store this URL for future unloading
-    const blobUrl = URL.createObjectURL(sourceBlob);
-    const module = await import(blobUrl);
-    const f = module[nodeType.type];
-    return f;
+/**
+ * @param {string} compiled Resulting compiled code
+ * @param {SourceMap} sourceMap Source map for the compiled code
+ * @returns {Promise<{}>} Compiled ES6 module exporting all the functions needed
+ */
+export async function importCompiled(compiled, sourceMap) {
+    // const sourceMapBlob = new Blob([sourceMap.toString()], { type: 'application/json' });
+    // const sourceMapUrl = URL.createObjectURL(sourceMapBlob);
+    const sourceMapUrl = `data:application/json;base64,${btoa(sourceMap.toString())}`;
+
+    compiled += `//# sourceMappingURL=${sourceMapUrl}`;
+
+    const compiledBlob = new Blob([compiled], { type: 'text/javascript' });
+    const compiledBlobUrl = URL.createObjectURL(compiledBlob);
+    const module = await import(compiledBlobUrl);
+
+    // TODO - store URLs for future unloading
+
+    return module;
 }
 
 /**
@@ -50,9 +69,9 @@ function simplePrefix(nodeType) {
 
 function simpleSuffix(nodeType) {
     const ports = nodeType.ports;
-    let result = '// Return suffix\n';
+    let result = '// Original code end -----\n';
     
-    result += `return [`;
+    result += `\treturn [`;
 
     ports.forEach((p) => {
         if (p.output) {
@@ -60,7 +79,7 @@ function simpleSuffix(nodeType) {
         }
     });
 
-    result += `];\n}`;
+    result += `];\n}\n`;
 
     return result;
 }
@@ -70,7 +89,7 @@ function simpleSuffix(nodeType) {
  */
 function vectorizationPrefix(nodeType) {
     const ports = nodeType.ports;
-    let result = '// Vectorization prefix\n';
+    let result = '\n';
 
     result += `export function ${nodeType.type}(`;
     result += ports.filter(p => !p.output).map(p => p.name).join(', ');
@@ -78,14 +97,14 @@ function vectorizationPrefix(nodeType) {
 
     ports.forEach((p, i) => {
         if (!p.output) {
-            result += `const _${p.name} = ArrayBuffer.isView(${p.name}) ? ${p.name} : [${p.name}];\n`;
+            result += `\tconst _${p.name} = ArrayBuffer.isView(${p.name}) ? ${p.name} : [${p.name}];\n`;
         }
         else {
-            result += `let ${p.name};\n`
+            result += `\tlet ${p.name};\n`
         }
     });
 
-    result += 'const _l = Math.max(';
+    result += '\tconst _l = Math.max(';
     ports.forEach((p) => {
         if (!p.output) {
             const variableName = `_${p.name}`;
@@ -96,16 +115,16 @@ function vectorizationPrefix(nodeType) {
 
     ports.forEach((p) => {
         if (p.output) {
-            result += `const _${p.name} = new Float32Array(_l);\n`;
+            result += `\tconst _${p.name} = new Float32Array(_l);\n`;
         }
     });
 
-    result += `for (let __i = 0; __i < _l; __i++) {\n`;
+    result += `\tfor (let __i = 0; __i < _l; __i++) {\n`;
 
     ports.forEach((p) => {
         if (!p.output) {
             const variableName = `_${p.name}`;
-            result += `\tconst ${p.name} = ${variableName}[__i % ${variableName}.length];\n`;
+            result += `\t\tconst ${p.name} = ${variableName}[__i % ${variableName}.length];\n`;
         }
     });
 
@@ -114,17 +133,17 @@ function vectorizationPrefix(nodeType) {
 
 function vectorizationSuffix(nodeType) {
     const ports = nodeType.ports;
-    let result = '\t// Vectorization suffix\n';
+    let result = '\t\t// Original code end -----\n';
 
     ports.forEach((p) => {
         if (p.output) {
-            result += `\t_${p.name}[__i] = ${p.name};\n`;
+            result += `\t\t_${p.name}[__i] = ${p.name};\n`;
         }
     });
 
-    result += '}\n';
+    result += '\t}\n';
 
-    result += `return [`;
+    result += `\treturn [`;
 
     ports.forEach((p) => {
         if (p.output) {
@@ -132,7 +151,7 @@ function vectorizationSuffix(nodeType) {
         }
     });
 
-    result += `];\n}`;
+    result += `];\n}\n`;
 
     return result;
 }

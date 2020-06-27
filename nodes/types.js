@@ -1,7 +1,8 @@
 import { Node } from "./nodes.js";
 import { Context } from "./context.js";
 import { xoshiro128ss } from "./tools/math.js";
-import { compile } from "./compiler.js";
+import { importCompiled, compileType } from "./compiler.js";
+import { SourceMap } from "./sourcemap.js";
 
 /**
  * Array Length.
@@ -67,13 +68,15 @@ export class NodeType {
      * @param {string} title 
      * @param {number} color 
      * @param {string} source
+     * @param {function} evaluate
      * @param {PortType[]} ports 
      */
-    constructor(type, title, color, source, ports) {
+    constructor(type, title, color, source, evaluate, ports) {
         this.type = type;
         this.title = title;
         this.color = color;
         this.source = source;
+        this.evaluate = evaluate;
         this.ports = ports;
     }
 }
@@ -307,13 +310,11 @@ export const types = [
         title: 'Rot',
         color: 0xffffff00,
         // TODO how to split vectorized part from static initialization
-        source: `
-            const sa = Math.sin(a);
-            const ca = Math.cos(a);
-            // vectorize(x, y, xr, yr)
-            xr = ca * x - sa * y;
-            yr = sa * x + ca * y;
-        `,
+        source: `const sa = Math.sin(a);
+const ca = Math.cos(a);
+// vectorize(x, y, xr, yr)
+xr = ca * x - sa * y;
+yr = sa * x + ca * y;`,
         ports: [
             input('x', 'float32[]', 0),
             input('y', 'float32[]', 0),
@@ -349,11 +350,25 @@ export function getType(type) {
 
 /**
  * Patch the types in place
+ * @param {NodeType[]} types
  */
 async function patchTypes(types) {
-    types.forEach(async (t) => {
+    let compiledTypes = '';
+
+    const sourceMap = new SourceMap();
+
+    types.forEach((t) => {
         if (t.source) {
-            t.evaluate = await compile(t);
+            const compiledType = compileType(t, sourceMap);
+            compiledTypes += compiledType;
+        }
+    });
+
+    const module = await importCompiled(compiledTypes, sourceMap);
+
+    types.forEach((t) => {
+        if (t.source) {
+            t.evaluate = module[t.type];
         }
     });
 }

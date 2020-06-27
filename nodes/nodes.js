@@ -46,6 +46,10 @@ export class Node {
         return null;
     }
 
+    /**
+     * 
+     * @param {*} label 
+     */
     getPortValue(label) {
         const port = this.findPortByLabel(label);
         const sourcePort = port.connectedTo;
