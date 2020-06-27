@@ -19,8 +19,8 @@ export function CanvasInput(o) {
   o = o ? o : {};
 
   // setup the defaults
-  self._canvas = o.canvas || null;
-  self._ctx = self._canvas ? self._canvas.getContext('2d') : null;
+  self._ctx = o.ctx;
+  self._canvas = o.canvas;
   self._x = o.x || 0;
   self._y = o.y || 0;
   self._extraX = o.extraX || 0;
@@ -55,12 +55,6 @@ export function CanvasInput(o) {
 
   // calculate the full width and height with padding, borders 
   self._calcWH();
-
-  // setup the off-DOM canvas
-  self._renderCanvas = document.createElement('canvas');
-  self._renderCanvas.setAttribute('width', self.outerW);
-  self._renderCanvas.setAttribute('height', self.outerH);
-  self._renderCtx = self._renderCanvas.getContext('2d', { alpha: true });
 
   // setup the background color
   self._backgroundColor = o.backgroundColor || '#fff';
@@ -157,25 +151,7 @@ export function CanvasInput(o) {
 
 // setup the prototype
 CanvasInput.prototype = {
-  /**
-   * Get/set the main canvas.
-   * @param  {Object} data Canvas reference.
-   * @return {Mixed}      CanvasInput or current canvas.
-   */
-  canvas: function(data) {
-    var self = this;
-
-    if (typeof data !== 'undefined') {
-      self._canvas = data;
-      self._ctx = self._canvas.getContext('2d');
-
-      return self.render();
-    } else {
-      return self._canvas;
-    }
-  },
-
-  /**
+   /**
    * Get/set the x-position.
    * @param  {Number} data The pixel position along the x-coordinate.
    * @return {Mixed}      CanvasInput or current x-value.
@@ -861,21 +837,13 @@ CanvasInput.prototype = {
   },
 
   /**
-   * Helper method to get the off-DOM canvas.
-   * @return {Object} Reference to the canvas.
-   */
-  renderCanvas: function() {
-    return this._renderCanvas;
-  },
-
-  /**
    * Clears and redraws the CanvasInput on an off-DOM canvas,
    * and if a main canvas is provided, draws it all onto that.
    * @return {CanvasInput}
    */
   render: function() {
     var self = this,
-      ctx = self._renderCtx,
+      ctx = self._ctx,
       w = self.outerW,
       h = self.outerH,
       br = self._borderRadius,
@@ -885,8 +853,8 @@ CanvasInput.prototype = {
       return;
     }
 
-    // clear the canvas
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    // Transform to match original code
+    ctx.setTransform(1, 0, 0, 1, self._x, self._y);
 
     // clip the text so that it fits within the box
     var text = self._clipText();
@@ -897,35 +865,26 @@ CanvasInput.prototype = {
       var selectOffset = self._textWidth(text.substring(0, self._selection[0])),
         selectWidth = self._textWidth(text.substring(self._selection[0], self._selection[1]));
 
-      ctx.fillStyle = self._selectionColor;
-      ctx.fillRect(paddingBorder + selectOffset, paddingBorder, selectWidth, self._height);
+      ctx.drawRect(paddingBorder + selectOffset, paddingBorder, selectWidth, self._height, self._selectionColor);
     }
 
     // draw the cursor
     if (self._cursor) {
       var cursorOffset = self._textWidth(text.substring(0, self._cursorPos));
-      ctx.fillStyle = self._fontColor;
-      ctx.fillRect(paddingBorder + cursorOffset, paddingBorder, 1, self._height);
+      ctx.drawRect(paddingBorder + cursorOffset, paddingBorder, 1, self._height, self._fontColor);
     }
 
     // draw the text
     var textX = self._padding + self._borderWidth,
-      textY = Math.round(paddingBorder + self._height / 2);
+      textY = Math.round(paddingBorder);
 
     // only remove the placeholder text if they have typed something
     text = (text === '' && self._placeHolder) ? self._placeHolder : text;
 
-    ctx.fillStyle = (self._value !== '' && self._value !== self._placeHolder) ? self._fontColor : self._placeHolderColor;
-    ctx.font = self._fontStyle + ' ' + self._fontWeight + ' ' + self._fontSize + 'px ' + self._fontFamily;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, textX, textY);
+    ctx.drawText(textX, textY, w, h, text, 
+      (self._value !== '' && self._value !== self._placeHolder) ? self._fontColor : self._placeHolderColor, self._fontSize);
 
-    // draw to the visible canvas
-    if (self._ctx) {
-      // self._ctx.clearRect(self._x, self._y, ctx.canvas.width, ctx.canvas.height);
-      self._ctx.drawImage(self._renderCanvas, self._x, self._y);
-    }
+    ctx.resetTransform();
 
     return self;
   },
@@ -953,10 +912,6 @@ CanvasInput.prototype = {
     self._canvas.removeEventListener('mousemove', self.mouseMoveListener);
     self._canvas.removeEventListener('mouseup', self.mouseUpListener);
     self._canvas.removeEventListener('mousedown', self.mouseDownListener);
-
-    // remove off-DOM canvas
-    self._renderCanvas = null;
-    self._renderCtx = null;
   },
 
   /**
@@ -1005,12 +960,9 @@ CanvasInput.prototype = {
    */
   _textWidth: function(text) {
     var self = this,
-      ctx = self._renderCtx;
+      ctx = self._ctx;
 
-    ctx.font = self._fontStyle + ' ' + self._fontWeight + ' ' + self._fontSize + 'px ' + self._fontFamily;
-    ctx.textAlign = 'left';
-
-    return ctx.measureText(text).width;
+    return ctx.getTextWidth(text, self._fontSize);
   },
 
   /**
@@ -1025,24 +977,6 @@ CanvasInput.prototype = {
   },
 
   /**
-   * Update the width and height of the off-DOM canvas when attributes are changed.
-   */
-  _updateCanvasWH: function() {
-    var self = this,
-      oldW = self._renderCanvas.width,
-      oldH = self._renderCanvas.height;
-
-    // update off-DOM canvas
-    self._renderCanvas.setAttribute('width', self.outerW);
-    self._renderCanvas.setAttribute('height', self.outerH);
-
-    // clear the main canvas
-    if (self._ctx) {
-      self._ctx.clearRect(self._x, self._y, oldW, oldH);
-    }
-  },
-
-  /**
    * Update the size and position of the hidden input (better UX on mobile).
    */
   _updateHiddenInput: function() {
@@ -1052,35 +986,6 @@ CanvasInput.prototype = {
     self._hiddenInput.style.top = (self._y + self._extraY + (self._canvas ? self._canvas.offsetTop : 0)) + 'px';
     self._hiddenInput.style.width = (self._width + self._padding * 2) + 'px';
     self._hiddenInput.style.height = (self._height + self._padding * 2) + 'px';
-  },
-
-  /**
-   * Creates the path for a rectangle with rounded corners.
-   * Must call ctx.fill() after calling this to draw the rectangle.
-   * @param  {Object} ctx Canvas context.
-   * @param  {Number} x   x-coordinate to draw from.
-   * @param  {Number} y   y-coordinate to draw from.
-   * @param  {Number} w   Width of rectangle.
-   * @param  {Number} h   Height of rectangle.
-   * @param  {Number} r   Border radius.
-   */
-  _roundedRect: function(ctx, x, y, w, h, r) {
-    if (w < 2 * r) r = w / 2;
-    if (h < 2 * r) r = h / 2;
-
-    ctx.beginPath();
-
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-
-    ctx.closePath();
   },
 
   /**

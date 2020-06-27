@@ -112,7 +112,7 @@ export class Node {
             hot,
             this.type.title);
 
-        let nodeWidth = ctx.getTextWidth(this.type.title) + 20;
+        let nodeWidth = ctx.getTextWidth(this.type.title) + 20 + 10;
         let cy = y + titleHeight;
         const portPad = 8;
         const labelPad = portPad;
@@ -127,7 +127,7 @@ export class Node {
                 cx += portPad;
                 drawPort(ctx, port, cx, cy + 7, 0xffcce00e, !!port.connectedTo);
                 cx += portWidth + portPad;
-                const textWidth = ctx.getTextWidth(port.type.label);
+                const textWidth = ctx.getTextWidth(port.type.label) + editorPad;
                 ctx.drawText(cx, cy, textWidth, portHeight, port.type.label);
                 cx += textWidth;
                 if (!port.connectedTo) {

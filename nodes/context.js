@@ -12,8 +12,8 @@ export class Context {
      * @param {string} elementId Id of element to put the context into
      * @param {() => void} draw Function to redraw everything
      */
-    constructor(elementId, draw, assetPrefix = '') {        
-        
+    constructor(elementId, draw, assetPrefix = '') {
+        this.font = '"Roboto Mono"';
         const div = document.getElementById(elementId);
         this.parent = div;
         const canvas = document.createElement('canvas');
@@ -22,7 +22,7 @@ export class Context {
 
         div.appendChild(canvas);
         const ctx = canvas.getContext('2d', { alpha: false });
-        ctx.font = '12px Arial';
+        ctx.font = `12px ${this.font}`;
 
         this.mouse = new Mouse(canvas);
         this.keyboard = new Keyboard(canvas);
@@ -45,8 +45,7 @@ export class Context {
         this.startTime = Date.now();
         this.time = 0;
         // Width of a capital M
-        ctx.font = '12px Arial';
-        this.mWidth = ctx.measureText('M').width;
+        this.mWidth = 7.201171875; // TODO run ctx.measureText('M').width; once font loads
 
         this.editorState = {};
     }
@@ -156,7 +155,7 @@ export class Context {
      * @param {string} text
      */
     drawText(x, y, w, h, text, color='white', fontSize=12) {
-        this.ctx.font = `${fontSize}px Arial`;
+        this.ctx.font = `${fontSize}px ${this.font}`;
         this.ctx.fillStyle = color;
         this.ctx.textBaseline = 'middle';
         this.clip(x, y, w, h);
@@ -254,6 +253,14 @@ export class Context {
      */
     getTextWidth(label, fontSize = 12) {
         return label.length * this.mWidth / 12 * fontSize;
+    }
+
+    setTransform(a, b, c, d, e, f) {
+        this.ctx.setTransform(a, b, c, d, e, f);
+    }
+
+    resetTransform() {
+        this.ctx.resetTransform();
     }
 
     resize() {

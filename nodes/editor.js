@@ -29,12 +29,13 @@ export function valueEditor(ctx, state, obj, x, y, w, h, type) {
     }
     else {
         // ctx.drawRect(x, y, w, h, 'rgba(255, 255, 255, 0.1)');
-    }
+    }``
 
     if (state.editing && state.editing.port === obj) {
         if (!state.editing.canvasInput) {
             const canvasInput = new CanvasInput(
                 {
+                    ctx,
                     canvas: ctx.canvas,
                     x,
                     y,
