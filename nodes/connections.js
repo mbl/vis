@@ -182,15 +182,15 @@ export function drawConnection(ctx, portFrom, portTo) {
     
     const offset = Math.max(offsetA, offsetB);
 
-    let color = 'white';
+    let color = 0xffffffff;
     if (ctx.hitTestResult && ctx.hitTestResult.type === 'port') {
         if(ctx.hitTestResult.obj === portTo) {
-            color = 'green';
+            color = 0xff00ff00;
         } 
         else if (ctx.hitTestResult.obj === portFrom) {
-            color = 'red';
+            color = 0xffff0000;
         }
-        if (color !== 'white') {
+        if (color !== 0xffffffff) {
             const t = (ctx.time % 1000) / 1000.0;
 
             const point = bezier(

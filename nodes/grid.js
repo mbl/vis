@@ -4,10 +4,10 @@ export function grid(ctx) {
     const cellSize = 16;
 
     for (var i = 0; i < ctx.width; i += cellSize) {
-        ctx.drawLine(i, 0, i, ctx.height, (i % (8 * cellSize)) !== 0 ? '#353535' : '#1c1c1c');
+        ctx.drawLine(i, 0, i, ctx.height, (i % (8 * cellSize)) !== 0 ? 0xff353535 : 0xff1c1c1c);
     }
 
     for (var i = 0; i < ctx.height; i += cellSize) {
-        ctx.drawLine(0, i, ctx.width, i, (i % (8 * cellSize) !== 0) ? '#353535' : '#1c1c1c');
+        ctx.drawLine(0, i, ctx.width, i, (i % (8 * cellSize) !== 0) ? 0xff353535 : 0xff1c1c1c);
     }
 }
