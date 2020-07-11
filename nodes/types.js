@@ -249,7 +249,7 @@ export const types = [
 
     {
         type: 'random',
-        title: 'Rnd',
+        title: 'Rand',
         color: 0xffffe00e,
         // TODO: How to compile these type of functions
         evaluate: (n, seed) => {

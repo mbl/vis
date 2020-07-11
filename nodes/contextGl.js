@@ -76,6 +76,7 @@ export class Context {
 
         // JavaScript arrays
         this.xyArray = new Float32Array(this.allocatedVertices * 2);
+        this.uvArray = new Float32Array(this.allocatedVertices * 2);
         this.colorArray = new Uint32Array(this.allocatedVertices); // ARGB color
         this.indexArray = new Uint32Array(this.allocatedIndices);
 
@@ -109,14 +110,19 @@ export class Context {
         // language=GLSL
         const vertexShaderCode = `
             attribute vec2 aPos; // Position of the vertex
+            attribute vec2 aUv; // Texture coordinate for the vertex
             attribute vec4 aColor; // Color of the vertex
 
+            uniform mat4 uTransform; // Transform from pixel coordinates to WebGL screen space (-1, 1)
+
             varying vec4 vColor;
+            varying vec2 vTextureCoord;
       
             void main() {
                 vColor = aColor.zyxw;
+                vTextureCoord = aUv;
       
-                gl_Position = vec4(aPos.x / 1904.0 * 2.0 - 1.0, - aPos.y / 1000.0 * 2.0 + 1.0, 0.0, 1.0);
+                gl_Position = uTransform * vec4(aPos.x, aPos.y, 0.0, 1.0);
             }
         `;
       
@@ -125,9 +131,13 @@ export class Context {
             precision mediump float;
             
             varying vec4 vColor;
+            
+            varying vec2 vTextureCoord;
+
+            uniform sampler2D uSampler;
           
             void main() {
-                gl_FragColor = vColor;
+                gl_FragColor = vColor * texture2D(uSampler, vTextureCoord);
             }
         `;
       
@@ -160,11 +170,30 @@ export class Context {
       
         this.posAttribute = gl.getAttribLocation(shaderProgram, "aPos");
         gl.enableVertexAttribArray(this.posAttribute);
+
+        this.uvAttribute = gl.getAttribLocation(shaderProgram, "aUv");
+        gl.enableVertexAttribArray(this.uvAttribute);
       
         this.colorAttribute = gl.getAttribLocation(shaderProgram, "aColor");
         gl.enableVertexAttribArray(this.colorAttribute);
 
+        this.transformUniform = gl.getUniformLocation(shaderProgram, "uTransform");
+        
+        // Create and set texture
+        const textureWidth = 256;
+        const textureHeight = 256;
+        this.texture = this.createTargetTexture(textureWidth, textureHeight);
+        const textureCanvas = this.drawCanvasPicture(textureWidth, textureHeight);
+        this.loadCanvasToTexture(textureCanvas, this.texture);
+
+        this.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
+        gl.uniform1i(this.samplerUniform, 0);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
+
         this.xyBuffer = gl.createBuffer();
+        this.uvBuffer = gl.createBuffer();
         this.colorBuffer = gl.createBuffer();
         this.indexBuffer = gl.createBuffer();
     }
@@ -185,6 +214,7 @@ export class Context {
         this.mouse.mouseUp = false;
         this.keyboard.endFrame();
 
+        /** @type {WebGL2RenderingContext} */
         const gl = this.ctx;
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.xyBuffer);
@@ -194,6 +224,14 @@ export class Context {
             gl.STATIC_DRAW
         );
         gl.vertexAttribPointer(this.posAttribute, 2, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.uvBuffer);
+        gl.bufferData(
+            gl.ARRAY_BUFFER,
+            this.uvArray,
+            gl.STATIC_DRAW
+        );
+        gl.vertexAttribPointer(this.uvAttribute, 2, gl.FLOAT, false, 0, 0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
         gl.bufferData(
@@ -210,9 +248,84 @@ export class Context {
             gl.STATIC_DRAW
         );
 
+        // Take input, scale it, move it
+        // Input is in [0..width, 0..height] for the canvas element
+        // Output is in [-1..1, -1..1] for WebGL
+        // This is done in two steps - 
+        // 1) scale 0..width to 0..2
+        // 2) subtract 1
+        // To do this we need to know canvas dimensions (width, height) that are in this.width, this.height
+        const sx = 2.0 / this.width;
+        const sy = -2.0 / this.height;
+        const mx = -1;
+        const my = 1;
+        const transform = new Float32Array([
+            sx, 0, 0, 0,
+            0, sy, 0, 0,
+            0, 0, 1, 0,
+            mx, my, 0, 1,
+        ]);
+        gl.uniformMatrix4fv(this.transformUniform, false, transform);
+
         gl.drawElements(gl.TRIANGLES, this.usedIndices, gl.UNSIGNED_INT, 0);
     }
 
+    // Textures ---
+    createTargetTexture(width, height) {
+        /** @type {WebGL2RenderingContext} */
+        const gl = this.ctx;
+
+        // create to render to
+        const targetTextureWidth = width;
+        const targetTextureHeight = height;
+        const targetTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, targetTexture);
+
+        {
+            const level = 0;
+            const internalFormat = gl.RGBA32F;
+            const border = 0;
+            const format = gl.RGBA;
+            const type = gl.FLOAT;
+            const data = null;
+
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
+            gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                targetTextureWidth, targetTextureHeight, border,
+                format, type, data);
+        }
+
+        return targetTexture;
+    }
+    
+    drawCanvasPicture(textureWidth, textureHeight) {
+        const offScreenCanvas = document.createElement('canvas');
+        offScreenCanvas.width = textureWidth;
+        offScreenCanvas.height = textureHeight;
+        const context = offScreenCanvas.getContext("2d");
+        context.fillStyle = 'black';
+        context.fillRect(0, 0, textureWidth, textureHeight);
+        context.clearRect(50, 150, 412, 100);
+        context.font = "180px Arial";
+        context.fillStyle = "#ff7d2a";
+        context.fillText("Hello", 0, 200);
+        context.fillStyle = "#64ff48";
+        context.fillText("World", 30, 350);
+        return offScreenCanvas;
+    }
+
+    loadCanvasToTexture(canvas, texture) {
+        /** @type {WebGL2RenderingContext} */
+        const gl = this.ctx;
+
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+    }
+    
     // Drawing commands ---
 
     pixel(x, y, color) {
@@ -248,24 +361,32 @@ export class Context {
         // 0
         this.xyArray[this.usedVertices * 2] = x1 - tx;
         this.xyArray[this.usedVertices * 2 + 1] = y1 - ty;
+        this.uvArray[this.usedVertices * 2] = 0;
+        this.uvArray[this.usedVertices * 2 + 1] = 0;
         this.colorArray[this.usedVertices] = fill;
         this.usedVertices++;
 
         // 1
         this.xyArray[this.usedVertices * 2] = x2 - tx;
         this.xyArray[this.usedVertices * 2 + 1] = y2 - ty;
+        this.uvArray[this.usedVertices * 2] = 0;
+        this.uvArray[this.usedVertices * 2 + 1] = 0;
         this.colorArray[this.usedVertices] = fill;
         this.usedVertices++;
 
         // 2
         this.xyArray[this.usedVertices * 2] = x2 + tx;
         this.xyArray[this.usedVertices * 2 + 1] = y2 + ty;
+        this.uvArray[this.usedVertices * 2] = 0;
+        this.uvArray[this.usedVertices * 2 + 1] = 0;
         this.colorArray[this.usedVertices] = fill;
         this.usedVertices++;
 
         // 3
         this.xyArray[this.usedVertices * 2] = x1 + tx;
         this.xyArray[this.usedVertices * 2 + 1] = y1 + ty;
+        this.uvArray[this.usedVertices * 2] = 0;
+        this.uvArray[this.usedVertices * 2 + 1] = 0;
         this.colorArray[this.usedVertices] = fill;
         this.usedVertices++;
 
@@ -291,28 +412,42 @@ export class Context {
             return;
         }
         const startVertex = this.usedVertices;
+
+        // UV coordinates for the rectangle in the texture space
+        const tx = 0;
+        const ty = 0;
+        const tw = 1; 
+        const th = 1;
         
         // 0
         this.xyArray[this.usedVertices * 2] = x;
         this.xyArray[this.usedVertices * 2 + 1] = y;
+        this.uvArray[this.usedVertices * 2] = tx;
+        this.uvArray[this.usedVertices * 2 + 1] = ty;
         this.colorArray[this.usedVertices] = fill;
         this.usedVertices++;
 
         // 1
         this.xyArray[this.usedVertices * 2] = x + w;
         this.xyArray[this.usedVertices * 2 + 1] = y;
+        this.uvArray[this.usedVertices * 2] = tx + tw;
+        this.uvArray[this.usedVertices * 2 + 1] = ty;
         this.colorArray[this.usedVertices] = fill;
         this.usedVertices++;
 
         // 2
         this.xyArray[this.usedVertices * 2] = x + w;
         this.xyArray[this.usedVertices * 2 + 1] = y + h;
+        this.uvArray[this.usedVertices * 2] = tx + tw;
+        this.uvArray[this.usedVertices * 2 + 1] = ty + th;
         this.colorArray[this.usedVertices] = fill;
         this.usedVertices++;
 
         // 3
         this.xyArray[this.usedVertices * 2] = x;
         this.xyArray[this.usedVertices * 2 + 1] = y + h;
+        this.uvArray[this.usedVertices * 2] = tx;
+        this.uvArray[this.usedVertices * 2 + 1] = ty + th;
         this.colorArray[this.usedVertices] = fill;
         this.usedVertices++;
 
