@@ -1,9 +1,10 @@
 import { TextureCache } from './textureCache.js';
-import { colorARGBToCSS } from './tools/colors.js';
+import { colorARGBToCSS, colorCSStoARGB } from './tools/colors.js';
 import { Mouse } from './mouse.js';
 import { valueEditor, checkStartEditing } from './editor.js';
 import { Keyboard } from './keyboard.js';
 import { bezier } from './tools/math.js';
+import { SpriteMap } from './tools/spriteMap.js';
 
 /**
  * Drawing / hitTesting / other querying context implemented in WebGL
@@ -20,6 +21,7 @@ export class Context {
         const canvas = document.createElement('canvas');
         this.canvas = canvas;
         this.resize();
+        this.spriteMap = new SpriteMap();
 
         div.appendChild(canvas);
 
@@ -66,6 +68,7 @@ export class Context {
         this.time = 0;
         // Width of a capital M
         this.mWidth = 7.201171875; // TODO run ctx.measureText('M').width; once font loads
+        this.mHeight = 12.0; // TODO dtto
 
         this.editorState = {};
 
@@ -180,11 +183,15 @@ export class Context {
         this.transformUniform = gl.getUniformLocation(shaderProgram, "uTransform");
         
         // Create and set texture
-        const textureWidth = 256;
-        const textureHeight = 256;
+        this.spriteMap.addFont(this.font, " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<>?,./`~!@#$%^&*()_-+=");
+        this.spriteMap.build();
+        document.body.appendChild(this.spriteMap.offScreenCanvas);
+        this.textureCanvas = this.spriteMap.getTexture();
+
+        const textureWidth = this.textureCanvas.width;
+        const textureHeight = this.textureCanvas.height;
         this.texture = this.createTargetTexture(textureWidth, textureHeight);
-        const textureCanvas = this.drawCanvasPicture(textureWidth, textureHeight);
-        this.loadCanvasToTexture(textureCanvas, this.texture);
+        this.loadCanvasToTexture(this.textureCanvas, this.texture);
 
         this.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
         gl.uniform1i(this.samplerUniform, 0);
@@ -301,22 +308,6 @@ export class Context {
 
         return targetTexture;
     }
-    
-    drawCanvasPicture(textureWidth, textureHeight) {
-        const offScreenCanvas = document.createElement('canvas');
-        offScreenCanvas.width = textureWidth;
-        offScreenCanvas.height = textureHeight;
-        const context = offScreenCanvas.getContext("2d");
-        context.fillStyle = 'black';
-        context.fillRect(0, 0, textureWidth, textureHeight);
-        context.clearRect(50, 150, 412, 100);
-        context.font = "180px Arial";
-        context.fillStyle = "#ff7d2a";
-        context.fillText("Hello", 0, 200);
-        context.fillStyle = "#64ff48";
-        context.fillText("World", 30, 350);
-        return offScreenCanvas;
-    }
 
     loadCanvasToTexture(canvas, texture) {
         /** @type {WebGL2RenderingContext} */
@@ -407,18 +398,11 @@ export class Context {
         this.ctx.stroke();
     }
 
-    drawRect(x, y, w, h, fill) {
-        if (!Number.isInteger(fill)) {
-            return;
-        }
+    drawTexturedRect(x, y, w, h, fill, texturePos) {
         const startVertex = this.usedVertices;
 
-        // UV coordinates for the rectangle in the texture space
-        const tx = 0;
-        const ty = 0;
-        const tw = 1; 
-        const th = 1;
-        
+        const { x: tx, y: ty, w: tw, h: th } = texturePos;
+
         // 0
         this.xyArray[this.usedVertices * 2] = x;
         this.xyArray[this.usedVertices * 2 + 1] = y;
@@ -459,6 +443,14 @@ export class Context {
         this.indexArray[this.usedIndices++] = startVertex + 0;
         this.indexArray[this.usedIndices++] = startVertex + 2;
         this.indexArray[this.usedIndices++] = startVertex + 3;
+    }
+
+    drawRect(x, y, w, h, fill) {
+        if (!Number.isInteger(fill)) {
+            return;
+        }
+
+        this.drawTexturedRect(x, y, w, h, fill, this.spriteMap.whitePixelBox);
     }
 
     clip(x, y, w, h) {
@@ -518,6 +510,14 @@ export class Context {
         }
     }
 
+    getCharacterHeight(fontSize) {
+        return this.mHeight;
+    }
+
+    getCharacterWidth(character, fontSize) {
+        return this.mWidth / 12.0 * fontSize;
+    }
+
     /**
      * Draw text into given rectangle.
      * 
@@ -528,7 +528,19 @@ export class Context {
      * @param {string} text
      */
     drawText(x, y, w, h, text, color = 'white', fontSize = 12) {
-        this.drawRect(x, y, w, h, 0x4000ff00);
+        let cx = x;
+        let cy = y;
+        const fill = colorCSStoARGB(color);
+        const ch = this.getCharacterHeight(fontSize);
+        const characterTextureMap = this.spriteMap.getCharacterMap(this.font);
+        for (let i = 0; i < text.length; i++) {
+            const t = text[i];
+            const cw = this.getCharacterWidth(t, fontSize);
+            const textureRect = characterTextureMap.get(t);
+            this.drawTexturedRect(cx, y, cw, ch, fill, textureRect);
+            cx += cw;
+        }
+        // this.drawRect(x, y, w, h, 0x4000ff00);
         return;
         this.ctx.font = `${fontSize}px ${this.font}`;
         this.ctx.fillStyle = color;
